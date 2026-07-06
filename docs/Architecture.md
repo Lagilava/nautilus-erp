@@ -37,6 +37,7 @@ Infrastructure adapter until the real spec is verified.
 - **M5 Sales** (customers, order & invoice state machines, payments, fiscalization port)
 - **M6 Purchasing** (suppliers, PO state machine, goods receipt → FIFO stock, supplier invoices/payments)
 - **M7 Audit logging** (SaveChanges interceptor → `AuditLogs`, admin-only trail)
+- **M8 Dashboard & reporting** (KPIs + CSV/Excel/PDF export via `IReportExporter`)
 
 Auditing is cross-cutting: `AuditSaveChangesInterceptor` (Persistence) records every
 insert/update/delete of a `BaseEntity`, attached via `OnConfiguring` so it applies to

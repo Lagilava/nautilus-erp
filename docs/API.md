@@ -127,5 +127,15 @@ warehouse (a FIFO cost layer per line at the PO unit cost) and advances the PO t
 `PartiallyReceived`/`Received`. Over-receiving a line → 409, nothing posted. Partial
 receipts across multiple deliveries are supported (`QuantityReceived`/`OutstandingQuantity`).
 
+## Dashboard & Reports (Milestone 8)
+
+- `GET /api/dashboard` — KPIs: customer/supplier/product counts, inventory value, low-stock
+  count, sales this month, accounts receivable/payable, open sales/purchase orders.
+- `GET /api/reports/inventory-valuation?warehouseId&format=` — export the valuation report.
+  `format`: `1` CSV, `2` Excel (xlsx), `3` PDF. Returns a file download.
+
+Reports are provider-agnostic: a query builds a `ReportTable`, and `IReportExporter`
+(CSV native, Excel via ClosedXML, PDF via QuestPDF) renders the requested format.
+
 ---
-Business endpoints (dashboard, notifications, …) are documented here as each module lands.
+Business endpoints (notifications, …) are documented here as each module lands.

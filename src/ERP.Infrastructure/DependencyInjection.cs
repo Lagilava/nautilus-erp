@@ -26,6 +26,9 @@ public static class DependencyInjection
         // Fiji fiscalization boundary — stub until a verified FRCS/VMS adapter exists.
         services.AddScoped<IFiscalizationService, NullFiscalizationService>();
 
+        // Report rendering (CSV/Excel/PDF).
+        services.AddSingleton<IReportExporter, Reporting.ReportExporter>();
+
         AddJwtAuthentication(services, configuration);
 
         return services;
