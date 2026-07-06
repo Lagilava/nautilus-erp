@@ -1,3 +1,4 @@
+using ERP.Domain.Auditing;
 using ERP.Domain.Catalog;
 using ERP.Domain.Identity;
 using ERP.Domain.Inventory;
@@ -51,6 +52,9 @@ public interface IApplicationDbContext
     DbSet<SupplierInvoice> SupplierInvoices { get; }
     DbSet<SupplierInvoiceLine> SupplierInvoiceLines { get; }
     DbSet<SupplierPayment> SupplierPayments { get; }
+
+    // Auditing (Milestone 7).
+    DbSet<AuditLog> AuditLogs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

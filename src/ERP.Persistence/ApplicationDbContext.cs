@@ -1,5 +1,6 @@
 using System.Reflection;
 using ERP.Application.Common.Interfaces;
+using ERP.Domain.Auditing;
 using ERP.Domain.Catalog;
 using ERP.Domain.Common;
 using ERP.Domain.Identity;
@@ -34,8 +35,19 @@ public sealed class ApplicationDbContext
         _clock = clock;
     }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        // Attach the audit interceptor here (rather than at registration) so it applies to
+        // every provider — including the in-memory provider used by integration tests —
+        // and gets the request-scoped services already injected into this context.
+        optionsBuilder.AddInterceptors(new Auditing.AuditSaveChangesInterceptor(_currentUser, _clock));
+    }
+
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<LoginHistory> LoginHistories => Set<LoginHistory>();
+
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<Currency> Currencies => Set<Currency>();
     public DbSet<UnitOfMeasure> UnitsOfMeasure => Set<UnitOfMeasure>();

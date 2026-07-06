@@ -36,6 +36,11 @@ Infrastructure adapter until the real spec is verified.
 - **M4 Inventory** (FIFO layers, ledger, valuation)
 - **M5 Sales** (customers, order & invoice state machines, payments, fiscalization port)
 - **M6 Purchasing** (suppliers, PO state machine, goods receipt → FIFO stock, supplier invoices/payments)
+- **M7 Audit logging** (SaveChanges interceptor → `AuditLogs`, admin-only trail)
+
+Auditing is cross-cutting: `AuditSaveChangesInterceptor` (Persistence) records every
+insert/update/delete of a `BaseEntity`, attached via `OnConfiguring` so it applies to
+every provider including tests. `GET /api/audit-logs` is Administrator-only.
 
 `IFiscalizationService` (Application port) is implemented by `NullFiscalizationService`
 (Infrastructure) — a deliberate stub until the FRCS/VMS spec is verified.
