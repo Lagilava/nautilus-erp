@@ -13,11 +13,17 @@ public sealed class IssueInvoiceCommandHandler : IRequestHandler<IssueInvoiceCom
 {
     private readonly IApplicationDbContext _db;
     private readonly IFiscalizationService _fiscalization;
+    private readonly IRealtimeNotifier _notifications;
+    private readonly IEmailQueue _email;
 
-    public IssueInvoiceCommandHandler(IApplicationDbContext db, IFiscalizationService fiscalization)
+    public IssueInvoiceCommandHandler(
+        IApplicationDbContext db, IFiscalizationService fiscalization,
+        IRealtimeNotifier notifications, IEmailQueue email)
     {
         _db = db;
         _fiscalization = fiscalization;
+        _notifications = notifications;
+        _email = email;
     }
 
     public async Task<Result> Handle(IssueInvoiceCommand request, CancellationToken ct)
@@ -35,6 +41,19 @@ public sealed class IssueInvoiceCommandHandler : IRequestHandler<IssueInvoiceCom
         invoice.SetFiscalResult(fiscal.Status, fiscal.Reference);
 
         await _db.SaveChangesAsync(ct);
+
+        // Notify staff in real time and queue an email to the customer (if we have an address).
+        await _notifications.PublishToAllAsync(
+            new NotificationMessage("Invoice issued", $"Invoice {invoice.Number} issued for {invoice.Total:0.00}."), ct);
+
+        var customerEmail = await _db.Customers
+            .Where(c => c.Id == invoice.CustomerId)
+            .Select(c => c.Email)
+            .FirstOrDefaultAsync(ct);
+        if (!string.IsNullOrWhiteSpace(customerEmail))
+            _email.Enqueue(new EmailMessage(customerEmail,
+                $"Invoice {invoice.Number}", $"Your invoice for {invoice.Total:0.00} has been issued."));
+
         return Result.Success();
     }
 }

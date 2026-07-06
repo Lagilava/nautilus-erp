@@ -137,5 +137,13 @@ receipts across multiple deliveries are supported (`QuantityReceived`/`Outstandi
 Reports are provider-agnostic: a query builds a `ReportTable`, and `IReportExporter`
 (CSV native, Excel via ClosedXML, PDF via QuestPDF) renders the requested format.
 
+## Notifications (Milestone 9)
+
+- **SignalR hub:** `/hubs/notifications` (authenticated). Clients handle the `notification`
+  method; each connection joins a per-user group so messages can target one user.
+- **Email queue:** business events enqueue emails onto **Hangfire** (in-memory storage) for
+  background delivery with retries. The shipped `IEmailSender` is a logging stub — swap in
+  SMTP via DI. Issuing an invoice publishes a real-time notification and queues a customer email.
+
 ---
-Business endpoints (notifications, …) are documented here as each module lands.
+Frontend (M10) and hardening (M11) follow.

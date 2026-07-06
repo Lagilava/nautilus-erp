@@ -2,7 +2,10 @@ using System.Text;
 using ERP.Application.Common.Interfaces;
 using ERP.Infrastructure.Fiscalization;
 using ERP.Infrastructure.Identity;
+using ERP.Infrastructure.Notifications;
 using ERP.Infrastructure.Services;
+using Hangfire;
+using Hangfire.InMemory;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,8 +33,28 @@ public static class DependencyInjection
         services.AddSingleton<IReportExporter, Reporting.ReportExporter>();
 
         AddJwtAuthentication(services, configuration);
+        AddNotifications(services);
 
         return services;
+    }
+
+    private static void AddNotifications(IServiceCollection services)
+    {
+        // Real-time notifications over SignalR.
+        services.AddSignalR();
+        services.AddScoped<IRealtimeNotifier, SignalRNotificationPublisher>();
+
+        // Background email queue via Hangfire (in-memory storage — no external dependency).
+        services.AddHangfire(config => config
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseInMemoryStorage());
+        services.AddHangfireServer();
+
+        services.AddScoped<IEmailQueue, HangfireEmailQueue>();
+        services.AddScoped<IEmailSender, LoggingEmailSender>();
+        services.AddScoped<EmailDispatchJob>();
     }
 
     private static void AddJwtAuthentication(IServiceCollection services, IConfiguration configuration)

@@ -86,6 +86,7 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+    app.MapHub<ERP.Infrastructure.Notifications.NotificationsHub>("/hubs/notifications");
 
     // Simple health endpoint returning a small JSON payload rather than the default plaintext.
     app.MapHealthChecks("/health", new HealthCheckOptions
