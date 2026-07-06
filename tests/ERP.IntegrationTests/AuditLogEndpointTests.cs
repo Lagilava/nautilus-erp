@@ -48,7 +48,7 @@ public class AuditLogEndpointTests : IClassFixture<ErpWebApplicationFactory>
 
         Assert.True(logs.GetProperty("totalCount").GetInt32() >= 1);
         var row = logs.GetProperty("items")[0];
-        Assert.Equal(1, row.GetProperty("action").GetInt32()); // Created
+        Assert.Equal("Created", row.GetProperty("action").GetString());
         Assert.Contains("Audited Co", row.GetProperty("changes").GetString());
     }
 

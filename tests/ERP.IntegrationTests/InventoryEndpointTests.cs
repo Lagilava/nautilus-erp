@@ -83,7 +83,7 @@ public class InventoryEndpointTests : IClassFixture<ErpWebApplicationFactory>
         var movements = await client.GetFromJsonAsync<JsonElement>(
             $"/api/inventory/movements?productId={productId}", Json);
         var issue = movements.GetProperty("items").EnumerateArray()
-            .First(m => m.GetProperty("type").GetInt32() == 2); // Issue
+            .First(m => m.GetProperty("type").GetString() == "Issue");
         Assert.Equal(35m, issue.GetProperty("totalCost").GetDecimal());
     }
 

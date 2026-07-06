@@ -81,7 +81,7 @@ public class PurchasingFlowEndpointTests : IClassFixture<ErpWebApplicationFactor
             lines = new[] { new { purchaseOrderLineId = poLineId, quantity = 8.0 } }, notes = (string?)null
         }));
         var afterPartial = await client.GetFromJsonAsync<JsonElement>($"/api/purchase-orders/{po}", Json);
-        Assert.Equal(3, afterPartial.GetProperty("status").GetInt32()); // PartiallyReceived
+        Assert.Equal("PartiallyReceived", afterPartial.GetProperty("status").GetString());
 
         // Receive remaining 12 → Received, stock 20.
         await IdAsync(await client.PostAsJsonAsync($"/api/purchase-orders/{po}/receipts", new
@@ -90,7 +90,7 @@ public class PurchasingFlowEndpointTests : IClassFixture<ErpWebApplicationFactor
             lines = new[] { new { purchaseOrderLineId = poLineId, quantity = 12.0 } }, notes = (string?)null
         }));
         var afterFull = await client.GetFromJsonAsync<JsonElement>($"/api/purchase-orders/{po}", Json);
-        Assert.Equal(4, afterFull.GetProperty("status").GetInt32()); // Received
+        Assert.Equal("Received", afterFull.GetProperty("status").GetString());
 
         var levels = await client.GetFromJsonAsync<JsonElement>($"/api/inventory/levels?warehouseId={warehouse}", Json);
         Assert.Equal(20, levels.GetProperty("items")[0].GetProperty("quantityOnHand").GetDecimal());
@@ -103,13 +103,13 @@ public class PurchasingFlowEndpointTests : IClassFixture<ErpWebApplicationFactor
 
         var approved = await client.GetFromJsonAsync<JsonElement>($"/api/supplier-invoices/{sinv}", Json);
         Assert.Equal(92m, approved.GetProperty("total").GetDecimal());
-        Assert.Equal(2, approved.GetProperty("status").GetInt32()); // Approved
+        Assert.Equal("Approved", approved.GetProperty("status").GetString());
 
         // Pay in full → Paid.
         await IdAsync(await client.PostAsJsonAsync($"/api/supplier-invoices/{sinv}/payments",
             new { supplierInvoiceId = sinv, amount = 92.0, paymentDate = "2026-07-10", method = 3, reference = "TT-1" }));
         var paid = await client.GetFromJsonAsync<JsonElement>($"/api/supplier-invoices/{sinv}", Json);
-        Assert.Equal(4, paid.GetProperty("status").GetInt32()); // Paid
+        Assert.Equal("Paid", paid.GetProperty("status").GetString());
         Assert.Equal(0m, paid.GetProperty("balance").GetDecimal());
     }
 

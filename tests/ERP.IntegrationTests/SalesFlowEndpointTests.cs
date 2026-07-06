@@ -96,8 +96,8 @@ public class SalesFlowEndpointTests : IClassFixture<ErpWebApplicationFactory>
         Assert.Equal(100m, issued.GetProperty("subTotal").GetDecimal());
         Assert.Equal(15m, issued.GetProperty("taxTotal").GetDecimal());
         Assert.Equal(115m, issued.GetProperty("total").GetDecimal());
-        Assert.Equal(2, issued.GetProperty("status").GetInt32());       // Issued
-        Assert.Equal(0, issued.GetProperty("fiscalStatus").GetInt32()); // NotSubmitted (stub)
+        Assert.Equal("Issued", issued.GetProperty("status").GetString());
+        Assert.Equal("NotSubmitted", issued.GetProperty("fiscalStatus").GetString()); // stub
 
         // Partial then final payment → Paid.
         await IdAsync(await client.PostAsJsonAsync($"/api/invoices/{invoice}/payments",
@@ -106,7 +106,7 @@ public class SalesFlowEndpointTests : IClassFixture<ErpWebApplicationFactory>
             new { invoiceId = invoice, amount = 65.0, paymentDate = "2026-07-06", method = 1, reference = (string?)null }));
 
         var paid = await client.GetFromJsonAsync<JsonElement>($"/api/invoices/{invoice}", Json);
-        Assert.Equal(4, paid.GetProperty("status").GetInt32()); // Paid
+        Assert.Equal("Paid", paid.GetProperty("status").GetString());
         Assert.Equal(0m, paid.GetProperty("balance").GetDecimal());
     }
 
@@ -145,6 +145,6 @@ public class SalesFlowEndpointTests : IClassFixture<ErpWebApplicationFactory>
         Assert.Equal(HttpStatusCode.Conflict, fulfil.StatusCode);
 
         var dto = await client.GetFromJsonAsync<JsonElement>($"/api/sales-orders/{order}", Json);
-        Assert.Equal(2, dto.GetProperty("status").GetInt32()); // still Confirmed
+        Assert.Equal("Confirmed", dto.GetProperty("status").GetString()); // unchanged
     }
 }

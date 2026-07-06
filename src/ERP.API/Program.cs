@@ -32,8 +32,22 @@ try
     builder.Services.AddProblemDetails();
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
+    // CORS for the SPA frontend. Origins come from config ("Cors:AllowedOrigins");
+    // AllowCredentials is required so the SignalR hub can authenticate.
+    const string SpaCorsPolicy = "SpaCors";
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                         ?? new[] { "http://localhost:5173", "http://localhost:3000" };
+    builder.Services.AddCors(options => options.AddPolicy(SpaCorsPolicy, policy => policy
+        .WithOrigins(allowedOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()));
+
     // API surface + OpenAPI/Swagger (with a bearer scheme so the UI can call secured endpoints).
-    builder.Services.AddControllers();
+    // Enums serialize as their names (e.g. "Issued") so the API is self-documenting for the SPA.
+    builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+            options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
     {
@@ -81,6 +95,8 @@ try
     }
 
     app.UseHttpsRedirection();
+
+    app.UseCors(SpaCorsPolicy);
 
     app.UseAuthentication();
     app.UseAuthorization();

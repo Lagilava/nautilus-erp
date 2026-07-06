@@ -2,6 +2,19 @@
 
 Base URL (dev): `https://localhost:<port>`
 
+## Conventions (for the SPA client)
+- **Enums are strings** (e.g. `"status": "Issued"`, `"fiscalStatus": "NotSubmitted"`).
+  Integer values are still accepted on input for convenience.
+- **Errors** are RFC 7807 problem-details; validation failures carry a field-keyed `errors`
+  object. Status mapping: 400 validation, 401 unauthorized, 404 not found, 409 conflict,
+  **423 account locked**.
+- **Pagination**: list endpoints return `{ items, page, pageSize, totalCount, totalPages, hasNextPage, hasPreviousPage }`.
+- **Dates**: `DateOnly` fields are ISO date strings (`"2026-07-01"`).
+- **CORS**: allowed SPA origins come from `Cors:AllowedOrigins` (default `http://localhost:5173`,
+  `http://localhost:3000`); credentials are allowed so the SignalR hub can authenticate.
+- **Auth**: `POST /api/auth/login` returns `accessToken` (15 min) + `refreshToken` (rotated)
+  in the body; send `Authorization: Bearer <accessToken>`; refresh via `POST /api/auth/refresh`.
+
 ## Endpoints
 
 ### `GET /health`
