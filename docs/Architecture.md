@@ -30,6 +30,11 @@ Tax/fiscalization are first-class Domain concerns, not late add-ons. See
 `IFiscalizationService` (FRCS TPOS/VMS) will be an Application port with a stub
 Infrastructure adapter until the real spec is verified.
 
-## Milestone 1 status (current)
-Solution scaffold only: Clean Architecture skeleton, Serilog, Swagger, `/health`,
-Docker Compose (SQL Server + Redis). No business logic yet.
+## Module status
+- **M1 Scaffold** · **M2 Auth** (JWT + refresh rotation, lockout, login history)
+- **M3 Reference data** (products, effective-dated taxes, org, catalog)
+- **M4 Inventory** (FIFO layers, ledger, valuation)
+- **M5 Sales** (customers, order & invoice state machines, payments, fiscalization port)
+
+`IFiscalizationService` (Application port) is implemented by `NullFiscalizationService`
+(Infrastructure) — a deliberate stub until the FRCS/VMS spec is verified.

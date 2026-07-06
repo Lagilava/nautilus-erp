@@ -34,7 +34,10 @@ Connection string: `ConnectionStrings:DefaultConnection` in `src/ERP.API/appsett
 - **Inventory:** `InventoryItems` (unique per product+warehouse), `StockLayers` (FIFO cost
   layers), `StockMovements` (immutable ledger).
 
-Migrations: `ReferenceData`, `InventoryModule`.
+- **Sales:** `Customers`, `SalesOrders` + `SalesOrderLines`, `Invoices` + `InvoiceLines`
+  (tax rate snapshotted per line), `Payments`.
+
+Migrations: `ReferenceData`, `InventoryModule`, `SalesModule`.
 
 > **Guid PKs are code-assigned** (`BaseEntity`). `OnModelCreating` marks `BaseEntity` Guid keys
 > `ValueGenerated.Never` so EF classifies new children of tracked parents as inserts, not

@@ -2,6 +2,7 @@ using ERP.Domain.Catalog;
 using ERP.Domain.Identity;
 using ERP.Domain.Inventory;
 using ERP.Domain.Organization;
+using ERP.Domain.Sales;
 using ERP.Domain.Taxation;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,6 +32,14 @@ public interface IApplicationDbContext
     DbSet<InventoryItem> InventoryItems { get; }
     DbSet<StockLayer> StockLayers { get; }
     DbSet<StockMovement> StockMovements { get; }
+
+    // Sales (Milestone 5).
+    DbSet<Customer> Customers { get; }
+    DbSet<SalesOrder> SalesOrders { get; }
+    DbSet<SalesOrderLine> SalesOrderLines { get; }
+    DbSet<Invoice> Invoices { get; }
+    DbSet<InvoiceLine> InvoiceLines { get; }
+    DbSet<Payment> Payments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

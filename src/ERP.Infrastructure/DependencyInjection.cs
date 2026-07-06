@@ -1,5 +1,6 @@
 using System.Text;
 using ERP.Application.Common.Interfaces;
+using ERP.Infrastructure.Fiscalization;
 using ERP.Infrastructure.Identity;
 using ERP.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -21,6 +22,9 @@ public static class DependencyInjection
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.AddScoped<ITokenService, TokenService>();
+
+        // Fiji fiscalization boundary — stub until a verified FRCS/VMS adapter exists.
+        services.AddScoped<IFiscalizationService, NullFiscalizationService>();
 
         AddJwtAuthentication(services, configuration);
 

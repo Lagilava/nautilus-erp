@@ -5,6 +5,7 @@ using ERP.Domain.Common;
 using ERP.Domain.Identity;
 using ERP.Domain.Inventory;
 using ERP.Domain.Organization;
+using ERP.Domain.Sales;
 using ERP.Domain.Taxation;
 using ERP.Persistence.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -47,6 +48,13 @@ public sealed class ApplicationDbContext
     public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
     public DbSet<StockLayer> StockLayers => Set<StockLayer>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<SalesOrder> SalesOrders => Set<SalesOrder>();
+    public DbSet<SalesOrderLine> SalesOrderLines => Set<SalesOrderLine>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
+    public DbSet<Payment> Payments => Set<Payment>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

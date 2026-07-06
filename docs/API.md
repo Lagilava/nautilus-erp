@@ -82,5 +82,30 @@ immutable ledger entry.
 Insufficient stock on issue/transfer/adjust returns **409 Conflict**. Stock value on a level
 is the sum of remaining FIFO layers (`Σ remainingQty × unitCost`).
 
+## Sales (Milestone 5)
+
+Reads: any authenticated user. Writes: `Administrator`/`Manager`.
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| GET/POST | `/api/customers` | List / create customers |
+| GET/POST | `/api/sales-orders` (+ `/{id}`) | List / create / view orders |
+| POST | `/api/sales-orders/{id}/confirm\|fulfill\|cancel` | Order state machine (fulfil issues stock) |
+| POST | `/api/invoices/from-order` | Raise a draft invoice from an order (snapshots VAT) |
+| POST | `/api/invoices/{id}/issue\|void` | Invoice state machine (issue submits to fiscalization) |
+| GET | `/api/invoices` (+ `/{id}`) | List / view invoices with totals + fiscal status |
+| GET/POST | `/api/invoices/{id}/payments` | List / record payments (advances to PartiallyPaid/Paid) |
+
+**State machines** (illegal transitions → 409): order `Draft→Confirmed→Fulfilled`, `→Cancelled`;
+invoice `Draft→Issued→PartiallyPaid→Paid`, `→Void` (only before payment). Fulfilment is
+all-or-nothing and issues FIFO stock; insufficient stock → 409, order stays Confirmed.
+
+**Fiji fiscalization:** issuing an invoice calls `IFiscalizationService`. The shipped stub
+records `fiscalStatus: NotSubmitted` — the FRCS/VMS integration is unverified and is **not
+faked**. Swapping in a verified adapter is a DI change only.
+
+**Tax on invoices is snapshotted** at the rate in force on the issue date (via the
+effective-dated tax engine), so an issued invoice never changes retroactively.
+
 ---
-Business endpoints (sales, purchase, …) are documented here as each module lands.
+Business endpoints (purchase, …) are documented here as each module lands.
