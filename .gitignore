@@ -1,0 +1,27 @@
+## .NET / Visual Studio
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+.vs/
+.vscode/
+
+## Build / test output
+[Tt]est[Rr]esults/
+*.trx
+coverage*/
+*.coverage
+
+## Logs
+logs/
+*.log
+
+## Secrets / local config
+appsettings.*.local.json
+*.env
+.env
+
+## Rider
+.idea/
