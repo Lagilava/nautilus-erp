@@ -107,5 +107,25 @@ faked**. Swapping in a verified adapter is a DI change only.
 **Tax on invoices is snapshotted** at the rate in force on the issue date (via the
 effective-dated tax engine), so an issued invoice never changes retroactively.
 
+## Purchasing (Milestone 6)
+
+Reads: any authenticated user. Writes: `Administrator`/`Manager`.
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| GET/POST | `/api/suppliers` | List / create suppliers |
+| GET/POST | `/api/purchase-orders` (+ `/{id}`) | List / create / view POs |
+| POST | `/api/purchase-orders/{id}/confirm\|cancel` | PO state machine |
+| POST | `/api/purchase-orders/{id}/receipts` | Post a goods receipt (**receives FIFO stock**) |
+| POST | `/api/supplier-invoices/from-order` | Bill from a PO (input-VAT snapshot) |
+| POST | `/api/supplier-invoices/{id}/approve\|cancel` | AP invoice state machine |
+| GET | `/api/supplier-invoices` (+ `/{id}`) | List / view supplier invoices |
+| POST | `/api/supplier-invoices/{id}/payments` | Record a payment to the supplier |
+
+**Goods receipt is the mirror of sales fulfilment:** posting one receives stock into the
+warehouse (a FIFO cost layer per line at the PO unit cost) and advances the PO to
+`PartiallyReceived`/`Received`. Over-receiving a line → 409, nothing posted. Partial
+receipts across multiple deliveries are supported (`QuantityReceived`/`OutstandingQuantity`).
+
 ---
-Business endpoints (purchase, …) are documented here as each module lands.
+Business endpoints (dashboard, notifications, …) are documented here as each module lands.

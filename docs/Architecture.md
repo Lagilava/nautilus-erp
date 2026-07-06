@@ -35,6 +35,7 @@ Infrastructure adapter until the real spec is verified.
 - **M3 Reference data** (products, effective-dated taxes, org, catalog)
 - **M4 Inventory** (FIFO layers, ledger, valuation)
 - **M5 Sales** (customers, order & invoice state machines, payments, fiscalization port)
+- **M6 Purchasing** (suppliers, PO state machine, goods receipt → FIFO stock, supplier invoices/payments)
 
 `IFiscalizationService` (Application port) is implemented by `NullFiscalizationService`
 (Infrastructure) — a deliberate stub until the FRCS/VMS spec is verified.

@@ -2,6 +2,7 @@ using ERP.Domain.Catalog;
 using ERP.Domain.Identity;
 using ERP.Domain.Inventory;
 using ERP.Domain.Organization;
+using ERP.Domain.Purchasing;
 using ERP.Domain.Sales;
 using ERP.Domain.Taxation;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,16 @@ public interface IApplicationDbContext
     DbSet<Invoice> Invoices { get; }
     DbSet<InvoiceLine> InvoiceLines { get; }
     DbSet<Payment> Payments { get; }
+
+    // Purchasing (Milestone 6).
+    DbSet<Supplier> Suppliers { get; }
+    DbSet<PurchaseOrder> PurchaseOrders { get; }
+    DbSet<PurchaseOrderLine> PurchaseOrderLines { get; }
+    DbSet<GoodsReceipt> GoodsReceipts { get; }
+    DbSet<GoodsReceiptLine> GoodsReceiptLines { get; }
+    DbSet<SupplierInvoice> SupplierInvoices { get; }
+    DbSet<SupplierInvoiceLine> SupplierInvoiceLines { get; }
+    DbSet<SupplierPayment> SupplierPayments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
