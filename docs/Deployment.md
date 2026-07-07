@@ -1,8 +1,14 @@
 # Deployment & Local Dev
 
+## Quick start (Windows, no Docker)
+Double-click `run-dev.bat` at the repo root — it opens the API and client in their own
+terminals and launches the browser. Or run the two commands manually (see below). Sign in
+with `admin@erp.local` / `Admin#12345`.
+
 ## Prerequisites
 - .NET SDK 9.0 (`dotnet --version` → 9.0.x)
-- Docker Desktop (for SQL Server + Redis)
+- Node 20+ (for the SPA)
+- Docker Desktop — optional; only for SQL Server + Redis or container deployment
 
 ## Local infrastructure
 ```bash
@@ -52,6 +58,36 @@ HTTP — no CORS or dev-cert friction. Override the target with `VITE_API_TARGET
 Run the API alongside it, then sign in with the seeded admin
 (`admin@erp.local` / `Admin#12345`).
 
+## Production (containers)
+Two Dockerfiles are provided:
+- **API** — root `Dockerfile` (multi-stage SDK→ASP.NET runtime, binds `:8080`).
+- **Client** — `client/Dockerfile` (Vite build → nginx; `client/nginx.conf` serves the SPA
+  and proxies `/api` + `/hubs` to the `api` service).
+
+```
+docker build -t nautilus-api .
+docker build -t nautilus-client ./client
+```
+
+### Required secrets (supply via env vars — never commit)
+| Setting | Env var | Notes |
+|---------|---------|-------|
+| JWT signing key | `Jwt__SigningKey` | ≥ 32 chars. **Startup fails** outside Development if it's the dev default or too short. |
+| SQL connection | `ConnectionStrings__DefaultConnection` | with `Database__Provider=SqlServer` |
+| Bootstrap admin | `Seed__AdminEmail` / `Seed__AdminPassword` | optional; seeds on first run |
+| Allowed origins | `Cors__AllowedOrigins__0` | the SPA origin(s) |
+
+Local secrets in Development: `dotnet user-secrets` on `src/ERP.API`.
+
+## Hardening (M11)
+- **Rate limiting**: `/api/auth` at `RateLimiting:AuthPerMinute` (default 20/min/IP), other
+  endpoints at `RateLimiting:GeneralPerMinute` (200/min/IP). Disabled under the Testing env.
+- **Response compression** and baseline **security headers** (`X-Content-Type-Options`,
+  `X-Frame-Options`, `Referrer-Policy`) on every response.
+- **HTTPS redirection** is enforced outside Development.
+- **Health**: `GET /health` includes a live database connectivity check.
+
 ## Notes
-- Data-store health checks (SQL/Redis) are added in the persistence milestone.
 - Logs roll daily to `src/ERP.API/logs/erp-*.log` (14-file retention).
+- Fiscalization (FRCS/VMS) ships as a stub (`FiscalStatus: NotSubmitted`); swap in a verified
+  `IFiscalizationService` adapter via DI once the spec is confirmed.

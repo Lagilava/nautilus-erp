@@ -39,6 +39,9 @@ Infrastructure adapter until the real spec is verified.
 - **M7 Audit logging** (SaveChanges interceptor → `AuditLogs`, admin-only trail)
 - **M8 Dashboard & reporting** (KPIs + CSV/Excel/PDF export via `IReportExporter`)
 - **M9 Notifications** (SignalR hub `IRealtimeNotifier` + Hangfire email queue `IEmailQueue`/`IEmailSender`)
+- **M10 React SPA** (Vite + TS, Lagoon design system; auth, dashboard, catalog, order-to-cash, procure-to-pay, admin)
+- **M11 Hardening** (rate limiting, response compression, security headers, DB health check, JWT-secret guard, Docker)
+- **System administration** (Administrator-only user/role management + reference-data settings)
 - **M10 Frontend** (`client/` — React + TS + Vite SPA; TanStack Query, Axios w/ token refresh,
   Tailwind "Lagoon" design system; auth, dashboard, products, customers, suppliers, inventory,
   reports, audit)
