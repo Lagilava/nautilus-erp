@@ -51,7 +51,12 @@ api.interceptors.response.use(
 /** Extracts a human-readable message from an Axios error's problem-details body. */
 export function apiErrorMessage(error: unknown, fallback = 'Something went wrong.'): string {
   if (axios.isAxiosError(error)) {
-    const problem = error.response?.data as ProblemDetails | undefined;
+    // No response at all → the API is unreachable (not running / wrong port), not a
+    // credentials or validation problem. Say so clearly rather than blaming the user.
+    if (!error.response) {
+      return 'Cannot reach the server. Is the API running on http://localhost:5126?';
+    }
+    const problem = error.response.data as ProblemDetails | undefined;
     if (problem?.errors) {
       const first = Object.values(problem.errors)[0];
       if (first?.length) return first[0];
