@@ -71,9 +71,43 @@ try
         });
     });
 
-    // Liveness/readiness. Data-store checks are added in later milestones once the
-    // persistence layer exists; keeping the wiring here means we only extend, never bolt on.
-    builder.Services.AddHealthChecks();
+    // Liveness/readiness, including a real database connectivity probe.
+    builder.Services.AddHealthChecks()
+        .AddDbContextCheck<ERP.Persistence.ApplicationDbContext>("database");
+
+    // Compress API responses (JSON/reports) for lower bandwidth.
+    builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
+
+    // Rate limiting: stricter on the auth surface (credential-stuffing / brute-force
+    // defence), lenient elsewhere. Partitioned per client IP. Limits are configurable.
+    var authPerMinute = builder.Configuration.GetValue("RateLimiting:AuthPerMinute", 20);
+    var generalPerMinute = builder.Configuration.GetValue("RateLimiting:GeneralPerMinute", 200);
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
+        {
+            var ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var isAuth = ctx.Request.Path.StartsWithSegments("/api/auth");
+            return System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                (isAuth ? "auth:" : "gen:") + ip,
+                _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = isAuth ? authPerMinute : generalPerMinute,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                });
+        });
+    });
+
+    // Fail fast in Production on an unsafe JWT signing key rather than shipping the dev default.
+    if (!builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"))
+    {
+        var signingKey = builder.Configuration["Jwt:SigningKey"] ?? string.Empty;
+        if (signingKey.Length < 32 || signingKey.Contains("dev-only", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                "Jwt:SigningKey must be a strong secret (>= 32 chars) supplied via secrets/env in non-Development environments.");
+    }
 
     var app = builder.Build();
 
@@ -85,7 +119,24 @@ try
         await initialiser.SeedAsync();
     }
 
+    app.UseResponseCompression();
     app.UseExceptionHandler();
+
+    // Baseline security headers on every response.
+    app.Use(async (context, next) =>
+    {
+        var headers = context.Response.Headers;
+        headers["X-Content-Type-Options"] = "nosniff";
+        headers["X-Frame-Options"] = "DENY";
+        headers["Referrer-Policy"] = "no-referrer";
+        await next();
+    });
+
+    // Rate limiting is disabled under the Testing environment so the auth-heavy integration
+    // tests (many logins from one IP) stay deterministic.
+    if (!app.Environment.IsEnvironment("Testing"))
+        app.UseRateLimiter();
+
     app.UseSerilogRequestLogging();
 
     if (app.Environment.IsDevelopment())

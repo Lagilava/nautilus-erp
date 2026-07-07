@@ -32,4 +32,16 @@ public interface IIdentityService
 
     /// <summary>Idempotently ensures a role exists (used during seeding/registration).</summary>
     Task EnsureRoleAsync(string role, CancellationToken cancellationToken = default);
+
+    // --- Administration (Milestone: system administration) ---
+
+    /// <summary>All user accounts with their roles and active state.</summary>
+    Task<IReadOnlyList<UserAccount>> GetUsersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces a user's role assignments with the supplied set.</summary>
+    Task<Result> SetUserRolesAsync(
+        Guid userId, IEnumerable<string> roles, CancellationToken cancellationToken = default);
+
+    /// <summary>Enables or disables sign-in for a user (disable = indefinite lockout).</summary>
+    Task<Result> SetUserActiveAsync(Guid userId, bool active, CancellationToken cancellationToken = default);
 }

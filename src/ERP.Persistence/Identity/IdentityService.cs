@@ -2,6 +2,7 @@ using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Models;
 using ERP.Shared.Results;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace ERP.Persistence.Identity;
 
@@ -118,6 +119,50 @@ public sealed class IdentityService : IIdentityService
         var roles = await _userManager.GetRolesAsync(user);
         return new UserIdentity(
             user.Id, user.Email ?? string.Empty, user.FirstName, user.LastName, roles.ToArray());
+    }
+
+    public async Task<IReadOnlyList<UserAccount>> GetUsersAsync(CancellationToken cancellationToken = default)
+    {
+        var users = await _userManager.Users.OrderBy(u => u.Email).ToListAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+
+        var accounts = new List<UserAccount>(users.Count);
+        foreach (var user in users)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            // Active unless an indefinite lockout is in force.
+            var isActive = user.LockoutEnd is null || user.LockoutEnd <= now;
+            accounts.Add(new UserAccount(
+                user.Id, user.Email ?? string.Empty, user.FirstName, user.LastName, roles.ToArray(), isActive));
+        }
+        return accounts;
+    }
+
+    public async Task<Result> SetUserRolesAsync(
+        Guid userId, IEnumerable<string> roles, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null) return Result.Failure(Error.NotFound("User not found."));
+
+        var target = roles.Distinct().ToArray();
+        foreach (var role in target) await EnsureRoleAsync(role, cancellationToken);
+
+        var current = await _userManager.GetRolesAsync(user);
+        var removed = await _userManager.RemoveFromRolesAsync(user, current.Except(target));
+        if (!removed.Succeeded) return Result.Failure(ToError(removed));
+
+        var added = await _userManager.AddToRolesAsync(user, target.Except(current));
+        return added.Succeeded ? Result.Success() : Result.Failure(ToError(added));
+    }
+
+    public async Task<Result> SetUserActiveAsync(Guid userId, bool active, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null) return Result.Failure(Error.NotFound("User not found."));
+
+        // Disable = lock out indefinitely; enable = clear the lockout end.
+        var result = await _userManager.SetLockoutEndDateAsync(user, active ? null : DateTimeOffset.MaxValue);
+        return result.Succeeded ? Result.Success() : Result.Failure(ToError(result));
     }
 
     private static Error ToError(IdentityResult result)
