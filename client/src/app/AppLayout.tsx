@@ -4,6 +4,7 @@ import { LogOut, Menu, X } from 'lucide-react';
 import { Wordmark } from '../components/Brand';
 import { useAuth } from '../auth/AuthContext';
 import { NotificationBell } from '../notifications/NotificationBell';
+import { ScrollToTop } from '../components/ScrollToTop';
 import { NAV } from './nav';
 
 export function AppLayout() {
@@ -56,6 +57,7 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen bg-canvas">
+      <ScrollToTop />
       {/* Desktop sidebar */}
       <aside className="hidden w-64 shrink-0 border-r border-line bg-surface lg:block">{sidebar}</aside>
 

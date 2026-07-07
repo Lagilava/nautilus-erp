@@ -11,12 +11,31 @@ import {
   CartesianGrid,
   Cell,
 } from 'recharts';
-import { Boxes, ShoppingCart, ClipboardList, TrendingUp, ArrowRight } from 'lucide-react';
-import { api } from '../lib/api';
-import type { Dashboard } from '../lib/types';
+import {
+  Boxes,
+  ShoppingCart,
+  ClipboardList,
+  TrendingUp,
+  ArrowRight,
+  Activity,
+  FileText,
+  Plus,
+  UserPlus,
+} from 'lucide-react';
+import { api, apiErrorMessage } from '../lib/api';
+import type { Dashboard, Paged, InvoiceSummary } from '../lib/types';
 import { fmtMoney, fmtNumber } from '../lib/format';
-import { PageHeader, Loading, ErrorNote } from '../components/ui';
-import { apiErrorMessage } from '../lib/api';
+import { statusTone, humanize } from '../lib/status';
+import { PageHeader, Loading, ErrorNote, StatusPill } from '../components/ui';
+import { useAuth } from '../auth/AuthContext';
+
+interface AuditEntry {
+  id: string;
+  entityName: string;
+  action: string;
+  userId?: string | null;
+  timestamp: string;
+}
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -29,9 +48,26 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
 }
 
 export function DashboardPage() {
+  const { user, hasRole } = useAuth();
+  const isAdmin = hasRole('Administrator');
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => (await api.get<Dashboard>('/api/dashboard')).data,
+  });
+
+  // Admin-only feeds. Audit is Administrator-only on the API; invoices any authenticated user.
+  const audit = useQuery({
+    queryKey: ['dashboard-audit'],
+    queryFn: async () =>
+      (await api.get<Paged<AuditEntry>>('/api/audit-logs', { params: { page: 1, pageSize: 7 } })).data,
+    enabled: isAdmin,
+  });
+  const recentInvoices = useQuery({
+    queryKey: ['dashboard-invoices'],
+    queryFn: async () =>
+      (await api.get<Paged<InvoiceSummary>>('/api/invoices', { params: { page: 1, pageSize: 5 } })).data,
+    enabled: isAdmin,
   });
 
   if (isLoading) return <Loading />;
@@ -46,7 +82,26 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="Dashboard" subtitle="A snapshot of your business today." />
+      <PageHeader
+        title={`Welcome back, ${user?.firstName ?? ''}`.trim()}
+        subtitle={
+          isAdmin
+            ? 'You have full administrative access. Here is where the business stands today.'
+            : 'A snapshot of your business today.'
+        }
+        actions={
+          isAdmin && (
+            <div className="hidden items-center gap-2 sm:flex">
+              <Link to="/sales-orders" className="btn-secondary">
+                <Plus className="h-4 w-4" /> Sales order
+              </Link>
+              <Link to="/admin/users" className="btn-secondary">
+                <UserPlus className="h-4 w-4" /> Add user
+              </Link>
+            </div>
+          )
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Sales this month" value={fmtMoney(data.salesThisMonth)} />
@@ -113,6 +168,83 @@ export function DashboardPage() {
           />
         </div>
       </div>
+
+      {/* Admin-only operational feeds */}
+      {isAdmin && (
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="card">
+            <div className="flex items-center justify-between border-b border-line px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-lagoon-500" />
+                <h2 className="text-base font-semibold text-ink">Recent activity</h2>
+              </div>
+              <Link to="/audit" className="text-xs font-medium text-lagoon-600 hover:text-lagoon-700">
+                View all
+              </Link>
+            </div>
+            <div className="divide-y divide-line">
+              {audit.isLoading ? (
+                <div className="px-5 py-8 text-center text-sm text-ink-muted">Loading…</div>
+              ) : audit.data && audit.data.items.length > 0 ? (
+                audit.data.items.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between px-5 py-3">
+                    <div className="flex items-center gap-3">
+                      <StatusPill
+                        label={a.action}
+                        tone={a.action === 'Created' ? 'success' : a.action === 'Deleted' ? 'danger' : 'neutral'}
+                      />
+                      <span className="text-sm text-ink-soft">{humanize(a.entityName)}</span>
+                    </div>
+                    <span className="tabular text-xs text-ink-muted">
+                      {new Date(a.timestamp).toLocaleString('en-FJ', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="px-5 py-8 text-center text-sm text-ink-muted">No recorded activity yet.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="flex items-center justify-between border-b border-line px-5 py-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-lagoon-500" />
+                <h2 className="text-base font-semibold text-ink">Recent invoices</h2>
+              </div>
+              <Link to="/invoices" className="text-xs font-medium text-lagoon-600 hover:text-lagoon-700">
+                View all
+              </Link>
+            </div>
+            <div className="divide-y divide-line">
+              {recentInvoices.isLoading ? (
+                <div className="px-5 py-8 text-center text-sm text-ink-muted">Loading…</div>
+              ) : recentInvoices.data && recentInvoices.data.items.length > 0 ? (
+                recentInvoices.data.items.map((inv) => (
+                  <Link
+                    key={inv.id}
+                    to={`/invoices/${inv.id}`}
+                    className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-lagoon-50/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="tabular text-sm font-medium text-ink">{inv.number}</span>
+                      <StatusPill label={humanize(inv.status)} tone={statusTone(inv.status)} />
+                    </div>
+                    <span className="tabular text-sm text-ink-soft">{fmtMoney(inv.total)}</span>
+                  </Link>
+                ))
+              ) : (
+                <div className="px-5 py-8 text-center text-sm text-ink-muted">No invoices yet.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Products" value={fmtNumber(data.productCount)} />
