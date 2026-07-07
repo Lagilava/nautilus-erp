@@ -1,4 +1,5 @@
 using ERP.API.Common;
+using ERP.Application.Common.Interfaces;
 using ERP.Application.Features.Sales.Invoices;
 using ERP.Application.Features.Sales.Payments;
 using ERP.Shared.Authorization;
@@ -20,6 +21,15 @@ public sealed class InvoicesController : ApiControllerBase
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         => HandleResult(await Sender.Send(new GetInvoiceByIdQuery(id), ct));
+
+    [HttpGet("{id:guid}/pdf")]
+    public async Task<IActionResult> Pdf(Guid id, [FromServices] IInvoiceDocumentRenderer renderer, CancellationToken ct)
+    {
+        var result = await Sender.Send(new GetInvoiceDocumentQuery(id), ct);
+        if (result.IsFailure) return HandleResult(result);
+        var bytes = renderer.RenderPdf(result.Value);
+        return File(bytes, "application/pdf", $"invoice-{result.Value.Number}.pdf");
+    }
 
     [HttpPost("from-order")]
     [Authorize(Roles = Writers)]

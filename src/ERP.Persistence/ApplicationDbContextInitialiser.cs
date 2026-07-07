@@ -51,6 +51,13 @@ public sealed class ApplicationDbContextInitialiser
                 await _roleManager.CreateAsync(new ApplicationRole(role));
         }
 
+        // Ensure the single company-profile row exists so invoices always have seller details.
+        if (!await _db.CompanyProfiles.AnyAsync())
+        {
+            _db.CompanyProfiles.Add(new Domain.Organization.CompanyProfile { Id = Domain.Organization.CompanyProfile.SingletonId });
+            await _db.SaveChangesAsync();
+        }
+
         var adminEmail = _configuration["Seed:AdminEmail"];
         var adminPassword = _configuration["Seed:AdminPassword"];
 

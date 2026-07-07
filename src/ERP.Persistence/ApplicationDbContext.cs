@@ -49,6 +49,8 @@ public sealed class ApplicationDbContext
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+    public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
+
     public DbSet<Currency> Currencies => Set<Currency>();
     public DbSet<UnitOfMeasure> UnitsOfMeasure => Set<UnitOfMeasure>();
     public DbSet<Category> Categories => Set<Category>();

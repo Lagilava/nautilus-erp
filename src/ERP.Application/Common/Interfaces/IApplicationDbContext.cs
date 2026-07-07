@@ -56,5 +56,8 @@ public interface IApplicationDbContext
     // Auditing (Milestone 7).
     DbSet<AuditLog> AuditLogs { get; }
 
+    // Company identity (for compliant tax invoices).
+    DbSet<CompanyProfile> CompanyProfiles { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
