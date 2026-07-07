@@ -270,6 +270,15 @@ export interface Warehouse {
   isActive: boolean;
 }
 
+export interface UserAccount {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  roles: string[];
+  isActive: boolean;
+}
+
 /** RFC 7807 problem-details as returned by the API on failure. */
 export interface ProblemDetails {
   title?: string;

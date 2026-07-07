@@ -17,6 +17,8 @@ import { PurchaseOrdersPage } from './pages/purchasing/PurchaseOrdersPage';
 import { PurchaseOrderDetailPage } from './pages/purchasing/PurchaseOrderDetailPage';
 import { SupplierInvoicesPage } from './pages/purchasing/SupplierInvoicesPage';
 import { SupplierInvoiceDetailPage } from './pages/purchasing/SupplierInvoiceDetailPage';
+import { UsersPage } from './pages/admin/UsersPage';
+import { SettingsPage } from './pages/admin/SettingsPage';
 
 export default function App() {
   return (
@@ -47,6 +49,9 @@ export default function App() {
 
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/audit" element={<AuditPage />} />
+
+        <Route path="/admin/users" element={<UsersPage />} />
+        <Route path="/admin/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

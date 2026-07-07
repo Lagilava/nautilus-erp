@@ -10,6 +10,8 @@ import {
   ReceiptText,
   BarChart3,
   ScrollText,
+  UserCog,
+  SlidersHorizontal,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -58,6 +60,13 @@ export const NAV: NavSection[] = [
     items: [
       { to: '/reports', label: 'Reports', icon: BarChart3 },
       { to: '/audit', label: 'Audit Trail', icon: ScrollText, roles: ['Administrator'] },
+    ],
+  },
+  {
+    heading: 'Administration',
+    items: [
+      { to: '/admin/users', label: 'Users', icon: UserCog, roles: ['Administrator'] },
+      { to: '/admin/settings', label: 'Settings', icon: SlidersHorizontal, roles: ['Administrator'] },
     ],
   },
 ];
