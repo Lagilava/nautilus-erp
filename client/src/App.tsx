@@ -9,7 +9,14 @@ import { SuppliersPage } from './pages/SuppliersPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { AuditPage } from './pages/AuditPage';
 import { ReportsPage } from './pages/ReportsPage';
-import { ComingSoon } from './pages/ComingSoon';
+import { SalesOrdersPage } from './pages/sales/SalesOrdersPage';
+import { SalesOrderDetailPage } from './pages/sales/SalesOrderDetailPage';
+import { InvoicesPage } from './pages/sales/InvoicesPage';
+import { InvoiceDetailPage } from './pages/sales/InvoiceDetailPage';
+import { PurchaseOrdersPage } from './pages/purchasing/PurchaseOrdersPage';
+import { PurchaseOrderDetailPage } from './pages/purchasing/PurchaseOrderDetailPage';
+import { SupplierInvoicesPage } from './pages/purchasing/SupplierInvoicesPage';
+import { SupplierInvoiceDetailPage } from './pages/purchasing/SupplierInvoiceDetailPage';
 
 export default function App() {
   return (
@@ -27,12 +34,17 @@ export default function App() {
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/customers" element={<CustomersPage />} />
         <Route path="/suppliers" element={<SuppliersPage />} />
-        <Route path="/sales-orders" element={<ComingSoon title="Sales Orders" endpoint="/api/sales-orders" />} />
-        <Route path="/invoices" element={<ComingSoon title="Invoices" endpoint="/api/invoices" />} />
-        <Route
-          path="/purchase-orders"
-          element={<ComingSoon title="Purchase Orders" endpoint="/api/purchase-orders" />}
-        />
+
+        <Route path="/sales-orders" element={<SalesOrdersPage />} />
+        <Route path="/sales-orders/:id" element={<SalesOrderDetailPage />} />
+        <Route path="/invoices" element={<InvoicesPage />} />
+        <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
+
+        <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
+        <Route path="/purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
+        <Route path="/supplier-invoices" element={<SupplierInvoicesPage />} />
+        <Route path="/supplier-invoices/:id" element={<SupplierInvoiceDetailPage />} />
+
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/audit" element={<AuditPage />} />
       </Route>

@@ -7,6 +7,7 @@ import {
   ShoppingCart,
   FileText,
   ClipboardList,
+  ReceiptText,
   BarChart3,
   ScrollText,
 } from 'lucide-react';
@@ -49,6 +50,7 @@ export const NAV: NavSection[] = [
     items: [
       { to: '/suppliers', label: 'Suppliers', icon: Truck },
       { to: '/purchase-orders', label: 'Purchase Orders', icon: ClipboardList },
+      { to: '/supplier-invoices', label: 'Supplier Invoices', icon: ReceiptText },
     ],
   },
   {

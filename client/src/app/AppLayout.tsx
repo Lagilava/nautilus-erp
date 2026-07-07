@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { LogOut, Menu, X } from 'lucide-react';
 import { Wordmark } from '../components/Brand';
 import { useAuth } from '../auth/AuthContext';
+import { NotificationBell } from '../notifications/NotificationBell';
 import { NAV } from './nav';
 
 export function AppLayout() {
@@ -73,6 +74,8 @@ export function AppLayout() {
           </button>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-3">
+            <NotificationBell />
+            <div className="h-6 w-px bg-line" />
             <div className="text-right">
               <div className="text-sm font-medium text-ink">
                 {user?.firstName} {user?.lastName}
