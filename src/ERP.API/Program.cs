@@ -92,9 +92,15 @@ try
     {
         app.UseSwagger();
         app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "ERP Platform API v1"));
+        // Friendly landing: the API has no root page, so point developers at Swagger.
+        app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
     }
-
-    app.UseHttpsRedirection();
+    else
+    {
+        // Only enforce HTTPS outside Development; the dev http profile has no HTTPS port,
+        // which otherwise logs "Failed to determine the https port for redirect".
+        app.UseHttpsRedirection();
+    }
 
     app.UseCors(SpaCorsPolicy);
 
