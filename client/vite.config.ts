@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// The API runs on https://localhost:7203 in Development (see launchSettings.json).
-// Proxy /api and /hubs there so the browser talks same-origin (no CORS/cert friction in dev).
-const API_TARGET = process.env.VITE_API_TARGET ?? 'https://localhost:7203';
+// `dotnet run` uses the default http profile (http://localhost:5126). Proxy /api and /hubs
+// there so the browser talks same-origin over plain HTTP — no CORS or dev-cert friction.
+// Override with VITE_API_TARGET (e.g. the https profile) if needed.
+const API_TARGET = process.env.VITE_API_TARGET ?? 'http://localhost:5126';
 
 export default defineConfig({
   plugins: [react()],

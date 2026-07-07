@@ -22,17 +22,34 @@ dotnet run   --project src/ERP.API
 Swagger UI: `https://localhost:<port>/swagger` (Development only).
 Health check: `GET /health` → JSON `{ status, checks[], totalDurationMs }`.
 
+## Local development without Docker (SQLite)
+For a zero-infrastructure run, the API uses **SQLite** in the Development environment
+(`appsettings.Development.json` sets `Database:Provider = Sqlite`). No SQL Server needed —
+the schema is created from the model on first run and the admin is seeded automatically.
+
+```
+dotnet run --project src/ERP.API
+```
+This listens on `http://localhost:5126` (default `http` launch profile). Switch back to
+SQL Server by setting `Database:Provider` to `SqlServer` (uses `ConnectionStrings:DefaultConnection`)
+and running `docker compose up -d` for the SQL Server + Redis containers.
+
+> Windows `cmd.exe` note: do not paste the `#` comments from these code blocks onto a command
+> line — cmd treats them as arguments, not comments. Run each command on its own.
+
 ## Frontend (client/)
 React + TypeScript + Vite SPA. Requires Node 20+.
-```bash
+```
 cd client
 npm install
-npm run dev      # http://localhost:5173 (proxies /api and /hubs to https://localhost:7203)
-npm run build    # type-check (tsc -b) + production build to client/dist
+npm run dev
 ```
-The dev server proxies to the API's HTTPS dev port (`vite.config.ts`), so the browser talks
-same-origin — no CORS/cert friction in dev. Override the target with `VITE_API_TARGET`.
-Run the API (`dotnet run --project src/ERP.API`) alongside it. Sign in with the seeded admin
+`npm run dev` serves `http://localhost:5173` and proxies `/api` + `/hubs` to the API at
+`http://localhost:5126` (see `vite.config.ts`), so the browser talks same-origin over plain
+HTTP — no CORS or dev-cert friction. Override the target with `VITE_API_TARGET`.
+`npm run build` type-checks (`tsc -b`) and builds to `client/dist`.
+
+Run the API alongside it, then sign in with the seeded admin
 (`admin@erp.local` / `Admin#12345`).
 
 ## Notes

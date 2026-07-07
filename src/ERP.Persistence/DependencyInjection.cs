@@ -13,10 +13,23 @@ public static class DependencyInjection
     public static IServiceCollection AddPersistence(
         this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        // Provider is config-driven so local dev can run on file-based SQLite with zero
+        // infrastructure, while SQL Server remains the default/production engine.
+        var provider = configuration["Database:Provider"] ?? "SqlServer";
 
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
+        {
+            if (provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+            {
+                var sqlite = configuration.GetConnectionString("Sqlite") ?? "Data Source=erp.db";
+                options.UseSqlite(sqlite);
+            }
+            else
+            {
+                var connectionString = configuration.GetConnectionString("DefaultConnection");
+                options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure());
+            }
+        });
 
         return services.AddPersistenceCore();
     }

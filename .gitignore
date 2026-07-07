@@ -18,6 +18,11 @@ coverage*/
 logs/
 *.log
 
+## Local dev database (SQLite)
+*.db
+*.db-shm
+*.db-wal
+
 ## Secrets / local config
 appsettings.*.local.json
 *.env

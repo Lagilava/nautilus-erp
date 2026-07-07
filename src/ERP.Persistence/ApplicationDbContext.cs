@@ -96,6 +96,21 @@ public sealed class ApplicationDbContext
             if (key is { Properties.Count: 1 } && key.Properties[0].ClrType == typeof(Guid))
                 key.Properties[0].ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
         }
+
+        // Only SQL Server auto-generates rowversion values. Under SQLite (local dev) or the
+        // in-memory provider (tests) the token stays null, so EF's `WHERE RowVersion = @orig`
+        // concurrency check would never match and updates would fail. Neutralise the tokens
+        // for non-SQL-Server providers; SQL Server keeps real optimistic concurrency.
+        if (Database.ProviderName != "Microsoft.EntityFrameworkCore.SqlServer")
+        {
+            foreach (var property in builder.Model.GetEntityTypes()
+                         .SelectMany(e => e.GetProperties())
+                         .Where(p => p.IsConcurrencyToken))
+            {
+                property.IsConcurrencyToken = false;
+                property.ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
+            }
+        }
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

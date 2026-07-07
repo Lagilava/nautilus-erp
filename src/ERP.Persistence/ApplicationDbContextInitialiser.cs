@@ -35,8 +35,9 @@ public sealed class ApplicationDbContextInitialiser
 
     public async Task MigrateAsync()
     {
-        // Only relational providers migrate; the in-memory provider used in tests does not.
-        if (_db.Database.IsRelational())
+        // Migrations are authored for SQL Server; apply them there. SQLite (local dev) and
+        // the in-memory provider (tests) build the schema directly from the model instead.
+        if (_db.Database.ProviderName == "Microsoft.EntityFrameworkCore.SqlServer")
             await _db.Database.MigrateAsync();
         else
             await _db.Database.EnsureCreatedAsync();
