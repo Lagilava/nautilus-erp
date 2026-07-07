@@ -39,6 +39,9 @@ Infrastructure adapter until the real spec is verified.
 - **M7 Audit logging** (SaveChanges interceptor → `AuditLogs`, admin-only trail)
 - **M8 Dashboard & reporting** (KPIs + CSV/Excel/PDF export via `IReportExporter`)
 - **M9 Notifications** (SignalR hub `IRealtimeNotifier` + Hangfire email queue `IEmailQueue`/`IEmailSender`)
+- **M10 Frontend** (`client/` — React + TS + Vite SPA; TanStack Query, Axios w/ token refresh,
+  Tailwind "Lagoon" design system; auth, dashboard, products, customers, suppliers, inventory,
+  reports, audit)
 
 Auditing is cross-cutting: `AuditSaveChangesInterceptor` (Persistence) records every
 insert/update/delete of a `BaseEntity`, attached via `OnConfiguring` so it applies to

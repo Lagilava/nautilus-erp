@@ -22,6 +22,19 @@ dotnet run   --project src/ERP.API
 Swagger UI: `https://localhost:<port>/swagger` (Development only).
 Health check: `GET /health` → JSON `{ status, checks[], totalDurationMs }`.
 
+## Frontend (client/)
+React + TypeScript + Vite SPA. Requires Node 20+.
+```bash
+cd client
+npm install
+npm run dev      # http://localhost:5173 (proxies /api and /hubs to https://localhost:7203)
+npm run build    # type-check (tsc -b) + production build to client/dist
+```
+The dev server proxies to the API's HTTPS dev port (`vite.config.ts`), so the browser talks
+same-origin — no CORS/cert friction in dev. Override the target with `VITE_API_TARGET`.
+Run the API (`dotnet run --project src/ERP.API`) alongside it. Sign in with the seeded admin
+(`admin@erp.local` / `Admin#12345`).
+
 ## Notes
 - Data-store health checks (SQL/Redis) are added in the persistence milestone.
 - Logs roll daily to `src/ERP.API/logs/erp-*.log` (14-file retention).

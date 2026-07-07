@@ -1,0 +1,61 @@
+import {
+  LayoutDashboard,
+  Package,
+  Users,
+  Truck,
+  Boxes,
+  ShoppingCart,
+  FileText,
+  ClipboardList,
+  BarChart3,
+  ScrollText,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+export interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  roles?: string[]; // if set, only shown to users with one of these roles
+}
+
+export interface NavSection {
+  heading: string;
+  items: NavItem[];
+}
+
+export const NAV: NavSection[] = [
+  {
+    heading: 'Overview',
+    items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard }],
+  },
+  {
+    heading: 'Catalog',
+    items: [
+      { to: '/products', label: 'Products', icon: Package },
+      { to: '/inventory', label: 'Inventory', icon: Boxes },
+    ],
+  },
+  {
+    heading: 'Sales',
+    items: [
+      { to: '/customers', label: 'Customers', icon: Users },
+      { to: '/sales-orders', label: 'Sales Orders', icon: ShoppingCart },
+      { to: '/invoices', label: 'Invoices', icon: FileText },
+    ],
+  },
+  {
+    heading: 'Purchasing',
+    items: [
+      { to: '/suppliers', label: 'Suppliers', icon: Truck },
+      { to: '/purchase-orders', label: 'Purchase Orders', icon: ClipboardList },
+    ],
+  },
+  {
+    heading: 'Insights',
+    items: [
+      { to: '/reports', label: 'Reports', icon: BarChart3 },
+      { to: '/audit', label: 'Audit Trail', icon: ScrollText, roles: ['Administrator'] },
+    ],
+  },
+];
