@@ -20,19 +20,27 @@ server {
         add_header Cache-Control "public, immutable";
     }
 
-    # Proxy API + SignalR hub to the api service (Docker network name "api").
+    # Proxy the API and the SignalR hub, so the browser only ever talks to this origin — no CORS,
+    # and the API's address is never handed to the browser. ${API_UPSTREAM} is a host:port,
+    # substituted at container start by the nginx image's envsubst step: "api:8080" under
+    # docker-compose, or the platform's internal service address on Render.
+    #
+    # X-Forwarded-Proto is what tells the API the browser arrived over HTTPS; its
+    # UseForwardedHeaders middleware reads it. Do not drop these headers.
     location /api/ {
-        proxy_pass http://api:8080;
+        proxy_pass http://${API_UPSTREAM};
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
     location /hubs/ {
-        proxy_pass http://api:8080;
+        proxy_pass http://${API_UPSTREAM};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     # SPA fallback: unknown routes serve index.html for client-side routing.

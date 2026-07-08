@@ -1,0 +1,74 @@
+# Render blueprint. Create the stack with: Render Dashboard → New → Blueprint → pick this repo.
+#
+# Topology: the browser only ever talks to the client service. nginx serves the SPA and proxies
+# /api and /hubs to the API over Render's private network, so the two look like one origin — no
+# CORS, and the API's URL is never handed to the browser.
+#
+#   browser ──HTTPS──> nautilus-client (nginx) ──private──> nautilus-api ──> nautilus-db
+#
+# Two values are deliberately NOT generated for you (`sync: false`, so Render prompts on first
+# deploy). Both are administrator credentials, and a password nobody chose is a password nobody
+# remembers — the app refuses to boot with a weak one rather than seed a guessable admin.
+
+databases:
+  - name: nautilus-db
+    databaseName: nautilus
+    user: nautilus
+    plan: free
+
+services:
+  - type: web
+    name: nautilus-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      # Render's managed Postgres hands out a postgres:// URL; PostgresConnectionString.Normalize
+      # translates it into the key/value form Npgsql expects.
+      - key: Database__Provider
+        value: Postgres
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: nautilus-db
+          property: connectionString
+
+      # Signing key: random, and never seen by a human. Rotating it invalidates every session.
+      - key: Jwt__SigningKey
+        generateValue: true
+
+      # The bootstrap administrator. Render prompts for these on first deploy. Choose a password
+      # of at least 12 characters with upper, lower, digit and a symbol — Identity's policy — or
+      # the account will not be created. Leave both blank to seed no administrator at all.
+      - key: Seed__AdminEmail
+        sync: false
+      - key: Seed__AdminPassword
+        sync: false
+
+      # The SPA's public origin, e.g. https://nautilus-client.onrender.com — used to build
+      # password-reset links, and as the CORS allowlist. Render exposes a service's host without
+      # a scheme and YAML cannot concatenate, so paste the full https:// URL after the client's
+      # first deploy. Same-origin proxying means CORS is not normally exercised at all.
+      - key: App__ClientBaseUrl
+        sync: false
+      - key: Cors__AllowedOrigins__0
+        sync: false
+
+  - type: web
+    name: nautilus-client
+    runtime: docker
+    plan: free
+    dockerfilePath: ./client/Dockerfile
+    dockerContext: ./client
+    envVars:
+      # host:port, substituted into nginx's proxy_pass at container start. Render's private
+      # network resolves service names, so this traffic never leaves the platform.
+      - key: API_UPSTREAM
+        fromService:
+          type: web
+          name: nautilus-api
+          property: hostport

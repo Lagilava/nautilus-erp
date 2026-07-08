@@ -36,9 +36,13 @@ public sealed class ApplicationDbContextInitialiser
 
     public async Task MigrateAsync()
     {
-        // Migrations are authored for SQL Server; apply them there. SQLite (local dev) and
-        // the in-memory provider (tests) build the schema directly from the model instead.
-        if (_db.Database.ProviderName == "Microsoft.EntityFrameworkCore.SqlServer")
+        // SQL Server and Postgres each have a real migration set, so their schema evolves through
+        // versioned migrations. SQLite (local dev) and the in-memory provider (tests) build the
+        // schema directly from the model — they are throwaway databases, not deployments.
+        var migrated = _db.Database.ProviderName is "Microsoft.EntityFrameworkCore.SqlServer"
+            or "Npgsql.EntityFrameworkCore.PostgreSQL";
+
+        if (migrated)
             await _db.Database.MigrateAsync();
         else
             await _db.Database.EnsureCreatedAsync();

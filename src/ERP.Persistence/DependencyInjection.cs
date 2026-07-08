@@ -14,7 +14,8 @@ public static class DependencyInjection
         this IServiceCollection services, IConfiguration configuration)
     {
         // Provider is config-driven so local dev can run on file-based SQLite with zero
-        // infrastructure, while SQL Server remains the default/production engine.
+        // infrastructure, while SQL Server remains the default engine and Postgres is available
+        // for platforms (Render, Fly, Heroku) that only offer managed Postgres.
         var provider = configuration["Database:Provider"] ?? "SqlServer";
 
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -23,6 +24,17 @@ public static class DependencyInjection
             {
                 var sqlite = configuration.GetConnectionString("Sqlite") ?? "Data Source=erp.db";
                 options.UseSqlite(sqlite);
+            }
+            else if (provider.Equals("Postgres", StringComparison.OrdinalIgnoreCase)
+                     || provider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
+            {
+                // Migrations differ per engine (identity columns, rowversion, index syntax), so
+                // each provider gets its own set in its own assembly. See MigrationsAssemblies.
+                var postgres = PostgresConnectionString.Normalize(
+                    configuration.GetConnectionString("DefaultConnection") ?? string.Empty);
+                options.UseNpgsql(postgres, npgsql => npgsql
+                    .EnableRetryOnFailure()
+                    .MigrationsAssembly(MigrationsAssemblies.Postgres));
             }
             else
             {

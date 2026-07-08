@@ -17,6 +17,9 @@
     <ProjectReference Include="..\ERP.Application\ERP.Application.csproj" />
     <ProjectReference Include="..\ERP.Infrastructure\ERP.Infrastructure.csproj" />
     <ProjectReference Include="..\ERP.Persistence\ERP.Persistence.csproj" />
+    <!-- Carries no code the API calls, but the Postgres migration set must be present in the
+         output for MigrateAsync to find it when Database:Provider=Postgres. -->
+    <ProjectReference Include="..\ERP.Persistence.Migrations.Postgres\ERP.Persistence.Migrations.Postgres.csproj" />
   </ItemGroup>
 
 </Project>

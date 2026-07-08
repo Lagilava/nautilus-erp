@@ -122,10 +122,15 @@ public sealed class ApplicationDbContext
             }
         }
 
-        // Only SQL Server auto-generates rowversion values. Under SQLite (local dev) or the
-        // in-memory provider (tests) the token stays null, so EF's `WHERE RowVersion = @orig`
-        // concurrency check would never match and updates would fail. Neutralise the tokens
-        // for non-SQL-Server providers; SQL Server keeps real optimistic concurrency.
+        // Only SQL Server auto-generates rowversion values. Under SQLite (local dev), Postgres,
+        // or the in-memory provider (tests) the token stays null, so EF's `WHERE RowVersion =
+        // @orig` concurrency check would never match and updates would fail. Neutralise the
+        // tokens for those providers; SQL Server keeps real optimistic concurrency.
+        //
+        // KNOWN LIMITATION: this means a Postgres deployment has no optimistic concurrency —
+        // two users editing the same record last-write-wins instead of one getting a conflict.
+        // The fix is Npgsql's system `xmin` column (UseXminAsConcurrencyToken), which needs a
+        // per-entity mapping rather than this blanket sweep.
         if (Database.ProviderName != "Microsoft.EntityFrameworkCore.SqlServer")
         {
             foreach (var property in builder.Model.GetEntityTypes()
