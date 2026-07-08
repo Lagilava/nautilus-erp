@@ -18,19 +18,22 @@ public sealed class ConfirmPurchaseOrderCommandHandler : IRequestHandler<Confirm
     private readonly IApplicationDbContext _db;
     private readonly ISegregationOfDuties _sod;
     private readonly ICurrentUserService _currentUser;
+    private readonly IBranchScope _scope;
 
     public ConfirmPurchaseOrderCommandHandler(
-        IApplicationDbContext db, ISegregationOfDuties sod, ICurrentUserService currentUser)
+        IApplicationDbContext db, ISegregationOfDuties sod, ICurrentUserService currentUser, IBranchScope scope)
     {
         _db = db;
         _sod = sod;
         _currentUser = currentUser;
+        _scope = scope;
     }
 
     public async Task<Result> Handle(ConfirmPurchaseOrderCommand request, CancellationToken ct)
     {
         var order = await _db.PurchaseOrders.Include(o => o.Lines).FirstOrDefaultAsync(o => o.Id == request.Id, ct);
-        if (order is null) return Result.Failure(Error.NotFound("Purchase order not found."));
+        if (order is null || !await _scope.CanAccessWarehouseAsync(order.WarehouseId, ct))
+            return Result.Failure(Error.NotFound("Purchase order not found."));
 
         // Maker-checker: the person who raised the order may not approve it.
         var sod = _sod.Ensure(SoDRule.PurchaseOrderApproval,
@@ -48,12 +51,23 @@ public sealed class ConfirmPurchaseOrderCommandHandler : IRequestHandler<Confirm
 public sealed class CancelPurchaseOrderCommandHandler : IRequestHandler<CancelPurchaseOrderCommand, Result>
 {
     private readonly IApplicationDbContext _db;
-    public CancelPurchaseOrderCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly IBranchScope _scope;
+
+    public CancelPurchaseOrderCommandHandler(IApplicationDbContext db, IBranchScope scope)
+    {
+        _db = db;
+        _scope = scope;
+    }
 
     public async Task<Result> Handle(CancelPurchaseOrderCommand request, CancellationToken ct)
     {
         var order = await _db.PurchaseOrders.FirstOrDefaultAsync(o => o.Id == request.Id, ct);
-        if (order is null) return Result.Failure(Error.NotFound("Purchase order not found."));
+
+        // Cancellation is destructive and needs the same branch guard as approval; without it a
+        // manager could halt another branch's procurement.
+        if (order is null || !await _scope.CanAccessWarehouseAsync(order.WarehouseId, ct))
+            return Result.Failure(Error.NotFound("Purchase order not found."));
+
         try { order.Cancel(); }
         catch (DomainException ex) { return Result.Failure(Error.Conflict(ex.Message)); }
         await _db.SaveChangesAsync(ct);
@@ -78,13 +92,25 @@ public sealed record GetPurchaseOrderByIdQuery(Guid Id) : IRequest<Result<Purcha
 public sealed class GetPurchaseOrderByIdQueryHandler : IRequestHandler<GetPurchaseOrderByIdQuery, Result<PurchaseOrderDto>>
 {
     private readonly IApplicationDbContext _db;
-    public GetPurchaseOrderByIdQueryHandler(IApplicationDbContext db) => _db = db;
+    private readonly IBranchScope _scope;
+
+    public GetPurchaseOrderByIdQueryHandler(IApplicationDbContext db, IBranchScope scope)
+    {
+        _db = db;
+        _scope = scope;
+    }
 
     public async Task<Result<PurchaseOrderDto>> Handle(GetPurchaseOrderByIdQuery request, CancellationToken ct)
     {
         var order = await _db.PurchaseOrders.AsNoTracking().Include(o => o.Lines)
             .FirstOrDefaultAsync(o => o.Id == request.Id, ct);
-        if (order is null) return Result.Failure<PurchaseOrderDto>(Error.NotFound("Purchase order not found."));
+
+        // The lines carry supplier cost prices. A GUID is not a secret — it appears in audit
+        // logs, stock-movement references and URLs shared between staff — so scope the
+        // single-record read exactly as the list query below does. NotFound, not Forbidden:
+        // a 403 would confirm the record exists.
+        if (order is null || !await _scope.CanAccessWarehouseAsync(order.WarehouseId, ct))
+            return Result.Failure<PurchaseOrderDto>(Error.NotFound("Purchase order not found."));
 
         var dto = new PurchaseOrderDto(
             order.Id, order.Number, order.SupplierId, order.WarehouseId, order.OrderDate,

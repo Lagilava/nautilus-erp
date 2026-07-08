@@ -15,6 +15,10 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
+    <!-- Hangfire.AspNetCore pulls in Newtonsoft.Json 11.0.1 (GHSA-5crp-9r3c-p9vr). Untrusted
+         JSON never reaches that parser, but pin the fixed version so the vulnerable-package
+         report stays clean and the signal remains worth reading. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="QuestPDF" Version="2024.12.3" />
   </ItemGroup>
 

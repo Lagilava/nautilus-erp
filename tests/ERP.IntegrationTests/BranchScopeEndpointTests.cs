@@ -114,6 +114,81 @@ public class BranchScopeEndpointTests : IClassFixture<ErpWebApplicationFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>
+    /// A GUID is not an access token. Fetching a single record must be scoped exactly as listing
+    /// them is, or a branch-scoped user reads another branch's cost prices by quoting an id they
+    /// saw in an audit log or a shared URL.
+    /// </summary>
+    [Fact]
+    public async Task Branch_scoped_user_cannot_read_another_branches_purchase_order()
+    {
+        var admin = await _factory.AdminClientAsync();
+        var (branchA, _, _, _, whB, prodB) = await SeedTwoBranchesAsync(admin);
+        var s = Guid.NewGuid().ToString("N")[..8];
+        var supplier = await IdAsync(await admin.PostAsJsonAsync("/api/suppliers", new
+        {
+            code = $"SUP{s}", name = "Globex", email = (string?)null, phone = (string?)null,
+            addressLine1 = (string?)null, city = (string?)null, country = (string?)null,
+            taxIdentificationNumber = (string?)null,
+        }));
+        var po = await IdAsync(await admin.PostAsJsonAsync("/api/purchase-orders", new
+        {
+            supplierId = supplier, warehouseId = whB, orderDate = "2026-07-01",
+            lines = new[] { new { productId = prodB, quantity = 5.0, unitCost = 5.0 } }, notes = (string?)null,
+        }));
+
+        var scoped = await _factory.ClientForNewUserAsync("Manager", branchA);
+
+        var response = await scoped.GetAsync($"/api/purchase-orders/{po}");
+
+        // NotFound, not Forbidden — a 403 would confirm the order exists. The admin, unscoped,
+        // still reads it, proving the 404 is authorization and not a broken fixture.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        (await admin.GetAsync($"/api/purchase-orders/{po}")).EnsureSuccessStatusCode();
+    }
+
+    /// <summary>
+    /// Adjustment is the one command that creates or destroys stock with no counterparty
+    /// document — the classic shrinkage-fraud vector. It must be branch-scoped.
+    /// </summary>
+    [Fact]
+    public async Task Branch_scoped_user_cannot_adjust_stock_in_another_branch()
+    {
+        var admin = await _factory.AdminClientAsync();
+        var (branchA, _, _, _, whB, prodB) = await SeedTwoBranchesAsync(admin);
+
+        var scoped = await _factory.ClientForNewUserAsync("Manager", branchA);
+
+        var response = await scoped.PostAsJsonAsync("/api/inventory/adjust", new
+        {
+            productId = prodB, warehouseId = whB, quantityDelta = -5.0,
+            unitCost = (decimal?)null, reason = "stock take",
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Omitting warehouseId must not widen an export past the caller's branch, and Staff must not
+    /// be able to export company-wide cost prices at all.
+    /// </summary>
+    [Fact]
+    public async Task Inventory_valuation_export_is_scoped_and_denied_to_staff()
+    {
+        var admin = await _factory.AdminClientAsync();
+        var (branchA, _, _, _, _, _) = await SeedTwoBranchesAsync(admin);
+
+        var staff = await _factory.ClientForNewUserAsync("Staff");
+        Assert.Equal(HttpStatusCode.Forbidden, (await staff.GetAsync("/api/reports/inventory-valuation")).StatusCode);
+
+        // A scoped manager may export, but sees only their own branch's value.
+        var scoped = await _factory.ClientForNewUserAsync("Manager", branchA);
+        var scopedCsv = await scoped.GetStringAsync("/api/reports/inventory-valuation");
+        var adminCsv = await admin.GetStringAsync("/api/reports/inventory-valuation");
+
+        Assert.True(scopedCsv.Split('\n').Length < adminCsv.Split('\n').Length);
+    }
+
     [Fact]
     public async Task Branch_scoped_dashboard_reports_only_that_branch()
     {

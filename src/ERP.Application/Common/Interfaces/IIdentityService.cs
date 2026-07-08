@@ -24,6 +24,13 @@ public interface IIdentityService
 
     Task<Result<UserIdentity>> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// True when the account is locked out — either by failed sign-in attempts or because an
+    /// administrator deactivated it. The refresh path consults this so a disabled account cannot
+    /// keep rotating tokens until its refresh token expires.
+    /// </summary>
+    Task<bool> IsLockedOutAsync(Guid userId, CancellationToken cancellationToken = default);
+
     Task<Result<string>> GeneratePasswordResetTokenAsync(
         string email, CancellationToken cancellationToken = default);
 

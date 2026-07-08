@@ -94,6 +94,56 @@ public class AuthEndpointTests : IClassFixture<ErpWebApplicationFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, reuse.StatusCode);
     }
 
+    /// <summary>
+    /// Reuse means two parties hold tokens from one login and we cannot tell the thief from the
+    /// victim. Rejecting only the replayed token would leave whoever redeemed it first — quite
+    /// possibly the attacker — rotating freely. The whole chain must die.
+    /// </summary>
+    [Fact]
+    public async Task Replaying_a_consumed_refresh_token_revokes_the_whole_family()
+    {
+        var user = await _factory.NewUserAsync("Staff");
+
+        // Rotate twice, so there is a chain: original → second → third.
+        var second = await RotateAsync(user.Client, user.Auth.RefreshToken);
+        var third = await RotateAsync(user.Client, second);
+
+        // The attacker replays the original, long-consumed token.
+        var replay = await user.Client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = user.Auth.RefreshToken });
+        Assert.Equal(HttpStatusCode.Unauthorized, replay.StatusCode);
+
+        // The live token at the end of the chain must now be dead too.
+        var afterDetection = await user.Client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = third });
+        Assert.Equal(HttpStatusCode.Unauthorized, afterDetection.StatusCode);
+    }
+
+    /// <summary>
+    /// Lockout is only consulted when signing in. Without revoking live refresh tokens, a
+    /// deactivated user keeps rotating and stays signed in until the token's 7-day expiry.
+    /// </summary>
+    [Fact]
+    public async Task Deactivating_a_user_immediately_kills_their_refresh_token()
+    {
+        var admin = await _factory.AdminClientAsync();
+        var user = await _factory.NewUserAsync("Staff");
+
+        // Their refresh token works while the account is live.
+        var rotated = await RotateAsync(user.Client, user.Auth.RefreshToken);
+
+        var deactivate = await admin.PostAsJsonAsync($"/api/users/{user.UserId}/active", false);
+        deactivate.EnsureSuccessStatusCode();
+
+        var afterDeactivation = await user.Client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = rotated });
+        Assert.Equal(HttpStatusCode.Unauthorized, afterDeactivation.StatusCode);
+    }
+
+    private static async Task<string> RotateAsync(HttpClient client, string refreshToken)
+    {
+        var response = await client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<AuthResponse>(Json))!.RefreshToken;
+    }
+
     [Fact]
     public async Task Logout_revokes_the_refresh_token()
     {

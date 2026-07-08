@@ -59,12 +59,29 @@ public sealed class ApproveSupplierInvoiceCommandHandler : IRequestHandler<Appro
 public sealed class CancelSupplierInvoiceCommandHandler : IRequestHandler<CancelSupplierInvoiceCommand, Result>
 {
     private readonly IApplicationDbContext _db;
-    public CancelSupplierInvoiceCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly ISegregationOfDuties _sod;
+
+    public CancelSupplierInvoiceCommandHandler(IApplicationDbContext db, ISegregationOfDuties sod)
+    {
+        _db = db;
+        _sod = sod;
+    }
 
     public async Task<Result> Handle(CancelSupplierInvoiceCommand request, CancellationToken ct)
     {
         var inv = await _db.SupplierInvoices.FirstOrDefaultAsync(i => i.Id == request.Id, ct);
         if (inv is null) return Result.Failure(Error.NotFound("Supplier invoice not found."));
+
+        // Cancelling an approved bill undoes a colleague's approval. Without this, whoever
+        // entered the invoice has a back door out of the four-eyes check on approval.
+        if (inv.Status == SupplierInvoiceStatus.Approved)
+        {
+            var sod = _sod.Ensure(SoDRule.SupplierInvoiceCancel,
+                "You cannot cancel a supplier invoice you entered once it has been approved.",
+                inv.CreatedBy);
+            if (sod.IsFailure) return sod;
+        }
+
         try { inv.Cancel(); }
         catch (DomainException ex) { return Result.Failure(Error.Conflict(ex.Message)); }
         await _db.SaveChangesAsync(ct);

@@ -23,7 +23,13 @@ public sealed record GetSalesOrderByIdQuery(Guid Id) : IRequest<Result<SalesOrde
 public sealed class GetSalesOrderByIdQueryHandler : IRequestHandler<GetSalesOrderByIdQuery, Result<SalesOrderDto>>
 {
     private readonly IApplicationDbContext _db;
-    public GetSalesOrderByIdQueryHandler(IApplicationDbContext db) => _db = db;
+    private readonly IBranchScope _scope;
+
+    public GetSalesOrderByIdQueryHandler(IApplicationDbContext db, IBranchScope scope)
+    {
+        _db = db;
+        _scope = scope;
+    }
 
     public async Task<Result<SalesOrderDto>> Handle(GetSalesOrderByIdQuery request, CancellationToken ct)
     {
@@ -31,7 +37,10 @@ public sealed class GetSalesOrderByIdQueryHandler : IRequestHandler<GetSalesOrde
             .Include(o => o.Lines)
             .FirstOrDefaultAsync(o => o.Id == request.Id, ct);
 
-        if (order is null)
+        // A GUID is not a secret — it appears in audit logs, references and shared URLs. Scope
+        // the single-record read exactly as the list query does, and answer NotFound rather than
+        // Forbidden so the response does not confirm the record exists.
+        if (order is null || !await _scope.CanAccessWarehouseAsync(order.WarehouseId, ct))
             return Result.Failure<SalesOrderDto>(Error.NotFound("Sales order not found."));
 
         var dto = new SalesOrderDto(

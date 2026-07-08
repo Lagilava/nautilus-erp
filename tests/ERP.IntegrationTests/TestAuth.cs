@@ -21,8 +21,16 @@ public static class TestAuth
         return client;
     }
 
+    /// <summary>A newly created user, their id, and a client already signed in as them.</summary>
+    public sealed record NewUser(HttpClient Client, Guid UserId, string Email, string Password, AuthResponse Auth);
+
     /// <summary>Creates a user with the given role (as admin) and returns a client signed in as them.</summary>
     public static async Task<HttpClient> ClientForNewUserAsync(
+        this ErpWebApplicationFactory factory, string role, Guid? branchId = null)
+        => (await factory.NewUserAsync(role, branchId)).Client;
+
+    /// <summary>As <see cref="ClientForNewUserAsync"/>, but also surfaces the id and tokens.</summary>
+    public static async Task<NewUser> NewUserAsync(
         this ErpWebApplicationFactory factory, string role, Guid? branchId = null)
     {
         var admin = await factory.AdminClientAsync();
@@ -34,10 +42,11 @@ public static class TestAuth
             email, password, firstName = "Test", lastName = role, roles = new[] { role }, branchId,
         });
         create.EnsureSuccessStatusCode();
+        var userId = Guid.Parse((await create.Content.ReadAsStringAsync()).Trim('"'));
 
         var client = factory.CreateClient();
-        await AuthenticateAsync(client, email, password);
-        return client;
+        var auth = await AuthenticateAsync(client, email, password);
+        return new NewUser(client, userId, email, password, auth);
     }
 
     public static async Task<AuthResponse> AuthenticateAsync(HttpClient client, string email, string password)

@@ -2,6 +2,7 @@ using ERP.API.Common;
 using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Reporting;
 using ERP.Application.Features.Reports;
+using ERP.Shared.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,8 +11,12 @@ namespace ERP.API.Controllers;
 /// <summary>
 /// Reports exportable as CSV/Excel/PDF. The query produces a provider-agnostic table; the
 /// controller renders it in the requested format via <see cref="IReportExporter"/>.
+///
+/// Restricted to Manager/Administrator: these exports carry cost prices and margins across the
+/// whole catalogue, which is the most commercially sensitive data the system holds. The queries
+/// are additionally branch-scoped, so a Manager exports only their own branch.
 /// </summary>
-[Authorize]
+[Authorize(Roles = $"{Roles.Administrator},{Roles.Manager}")]
 [Route("api/reports")]
 public sealed class ReportsController : ApiControllerBase
 {

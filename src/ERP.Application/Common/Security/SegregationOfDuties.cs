@@ -26,6 +26,12 @@ public enum SoDRule
 
     /// <summary>You may not void a customer invoice you issued.</summary>
     InvoiceVoid,
+
+    /// <summary>
+    /// You may not cancel a supplier invoice that someone else approved. Cancellation is the
+    /// back door out of the approval you were not allowed to grant yourself.
+    /// </summary>
+    SupplierInvoiceCancel,
 }
 
 /// <summary>

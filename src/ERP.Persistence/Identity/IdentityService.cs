@@ -91,6 +91,12 @@ public sealed class IdentityService : IIdentityService
             : Result.Success(await ToUserIdentityAsync(user));
     }
 
+    public async Task<bool> IsLockedOutAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        return user is not null && await _userManager.IsLockedOutAsync(user);
+    }
+
     public async Task<Result<string>> GeneratePasswordResetTokenAsync(
         string email, CancellationToken cancellationToken = default)
     {
@@ -211,7 +217,23 @@ public sealed class IdentityService : IIdentityService
 
         // Disable = lock out indefinitely; enable = clear the lockout end.
         var result = await _userManager.SetLockoutEndDateAsync(user, active ? null : DateTimeOffset.MaxValue);
-        return result.Succeeded ? Result.Success() : Result.Failure(ToError(result));
+        if (!result.Succeeded) return Result.Failure(ToError(result));
+
+        // Locking the account only closes the login door. A deactivated user still holding a
+        // refresh token would keep rotating it — and stay signed in — for its full lifetime, so
+        // revoke the live tokens too. This is what makes "deactivate" take effect immediately.
+        if (!active)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var live = await _db.RefreshTokens
+                .Where(t => t.UserId == userId && t.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+
+            foreach (var token in live) token.Revoke(now);
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Result.Success();
     }
 
     private static Error ToError(IdentityResult result)

@@ -32,7 +32,11 @@ Three layers, applied in order:
    Staff hold the *warehouse* duty (they post goods receipts) but approving spend — raising,
    confirming, or cancelling a purchase order — stays with Managers and Administrators.
 2. **Branch scoping** (record-level) — a `branch` JWT claim narrows every warehouse-bound
-   query and write through `IBranchScope`. A user with no branch is unrestricted.
+   query and write through `IBranchScope`. A user with no branch is unrestricted. Single-record
+   reads answer **404**, not 403, so the response never confirms that an out-of-branch record
+   exists. Note that scoping is applied *by convention*, handler by handler; a global EF query
+   filter on warehouse-bound entities would make omissions impossible rather than merely
+   discouraged.
 3. **Segregation of duties** (`Common/Security/SegregationOfDuties.cs`) — maker-checker on the
    procure-to-pay chain, so no one person can raise an order, approve it, receive the goods,
    approve the bill and pay it. The rules:
@@ -44,6 +48,7 @@ Three layers, applied in order:
    | `SupplierInvoiceApproval` | the person who entered the bill, or who received the goods |
    | `SupplierPayment` | the person who approved the bill |
    | `InvoiceVoid` | the person who issued the invoice |
+   | `SupplierInvoiceCancel` | the person who entered a bill someone else approved |
 
    Enforced by default and returning **403** with an explanatory message. Every block is logged.
    A two-person shop can relax individual rules — or all of them — through configuration:

@@ -46,8 +46,11 @@ public sealed class IssueInvoiceCommandHandler : IRequestHandler<IssueInvoiceCom
         await _db.SaveChangesAsync(ct);
 
         // Notify staff in real time and queue an email to the customer (if we have an address).
+        // The payload deliberately omits the amount: this goes to EVERY connected user, including
+        // staff scoped out of the branch that raised the invoice, and a day of such messages
+        // would reconstruct another branch's revenue.
         await _notifications.PublishToAllAsync(
-            new NotificationMessage("Invoice issued", $"Invoice {invoice.Number} issued for {invoice.Total:0.00}."), ct);
+            new NotificationMessage("Invoice issued", $"Invoice {invoice.Number} has been issued."), ct);
 
         var customerEmail = await _db.Customers
             .Where(c => c.Id == invoice.CustomerId)

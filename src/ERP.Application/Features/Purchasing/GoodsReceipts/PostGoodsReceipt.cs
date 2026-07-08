@@ -45,12 +45,15 @@ public sealed class PostGoodsReceiptCommandHandler : IRequestHandler<PostGoodsRe
     private readonly IApplicationDbContext _db;
     private readonly IDateTime _clock;
     private readonly ISegregationOfDuties _sod;
+    private readonly IBranchScope _scope;
 
-    public PostGoodsReceiptCommandHandler(IApplicationDbContext db, IDateTime clock, ISegregationOfDuties sod)
+    public PostGoodsReceiptCommandHandler(
+        IApplicationDbContext db, IDateTime clock, ISegregationOfDuties sod, IBranchScope scope)
     {
         _db = db;
         _clock = clock;
         _sod = sod;
+        _scope = scope;
     }
 
     public async Task<Result<Guid>> Handle(PostGoodsReceiptCommand request, CancellationToken ct)
@@ -58,6 +61,11 @@ public sealed class PostGoodsReceiptCommandHandler : IRequestHandler<PostGoodsRe
         var order = await _db.PurchaseOrders.Include(o => o.Lines)
             .FirstOrDefaultAsync(o => o.Id == request.PurchaseOrderId, ct);
         if (order is null)
+            return Result.Failure<Guid>(Error.NotFound("Purchase order not found."));
+
+        // The receipt lands stock in the order's warehouse, so the receiver must be entitled to
+        // it. NotFound rather than Unauthorized — a 403 would confirm the order exists.
+        if (!await _scope.CanAccessWarehouseAsync(order.WarehouseId, ct))
             return Result.Failure<Guid>(Error.NotFound("Purchase order not found."));
 
         // Purchasing must be separate from receiving: whoever raised or approved the order

@@ -2,6 +2,7 @@ using System.Text.Json;
 using ERP.Application.Common.Interfaces;
 using ERP.Domain.Auditing;
 using ERP.Domain.Common;
+using ERP.Domain.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -47,8 +48,14 @@ public sealed class AuditSaveChangesInterceptor : SaveChangesInterceptor
 
         // Snapshot first: adding AuditLog rows mutates the change tracker, so we must not
         // enumerate it while modifying it.
+        //
+        // RefreshToken and LoginHistory are excluded. Both are written on every login and every
+        // token rotation, so auditing them buries real business changes in noise — and a
+        // RefreshToken's serialized properties include its TokenHash, which would then outlive
+        // the token itself in a table any Administrator can read.
         var audited = context.ChangeTracker.Entries<BaseEntity>()
             .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .Where(e => e.Entity is not RefreshToken and not LoginHistory)
             .ToList();
 
         foreach (var entry in audited)

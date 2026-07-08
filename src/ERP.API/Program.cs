@@ -100,13 +100,36 @@ try
         });
     });
 
-    // Fail fast in Production on an unsafe JWT signing key rather than shipping the dev default.
+    // Behind Render/any reverse proxy, TLS terminates at the edge and the app is reached over
+    // plain HTTP. Without this, Request.IsHttps is always false (redirect loop) and
+    // Connection.RemoteIpAddress is the proxy — collapsing every client into ONE rate-limit
+    // partition, which turns the brute-force defence below into a self-inflicted DoS.
+    builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+                                   | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+
+        // The platform's proxy IP is not stable, so we cannot allowlist it. This trusts
+        // X-Forwarded-* unconditionally, which is only safe because the edge overwrites those
+        // headers. Never run this container directly exposed to the internet.
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+
+    // Fail fast in Production on unsafe bootstrap secrets rather than shipping the dev defaults.
     if (!builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"))
     {
         var signingKey = builder.Configuration["Jwt:SigningKey"] ?? string.Empty;
         if (signingKey.Length < 32 || signingKey.Contains("dev-only", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException(
                 "Jwt:SigningKey must be a strong secret (>= 32 chars) supplied via secrets/env in non-Development environments.");
+
+        // A deployment reachable from the internet must not be seeded with a password that
+        // lives in source control. Either supply a real secret, or seed no administrator.
+        var seedPassword = builder.Configuration["Seed:AdminPassword"];
+        if (!string.IsNullOrEmpty(seedPassword) && (seedPassword.Length < 12 || seedPassword.Contains("Admin#")))
+            throw new InvalidOperationException(
+                "Seed:AdminPassword must be a strong secret supplied via secrets/env in non-Development environments, or omitted entirely.");
     }
 
     var app = builder.Build();
@@ -131,16 +154,29 @@ try
         }
     }
 
+    // FIRST: everything downstream (HTTPS redirect, rate-limit partitioning, login-history IPs)
+    // reads the scheme and client IP this middleware restores from the proxy's headers.
+    app.UseForwardedHeaders();
+
     app.UseResponseCompression();
     app.UseExceptionHandler();
 
-    // Baseline security headers on every response.
+    // Baseline security headers on every response. Note these decorate API responses only —
+    // the SPA's HTML is served by nginx, which carries its own CSP (see client/nginx.conf).
     app.Use(async (context, next) =>
     {
         var headers = context.Response.Headers;
         headers["X-Content-Type-Options"] = "nosniff";
         headers["X-Frame-Options"] = "DENY";
         headers["Referrer-Policy"] = "no-referrer";
+        headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+
+        // The API returns JSON, never markup, so a maximally restrictive policy costs nothing
+        // and contains anything that manages to get reflected. Exempt Development, where the
+        // same host serves the Swagger UI's own scripts and styles.
+        if (!app.Environment.IsDevelopment())
+            headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'";
+
         await next();
     });
 
@@ -162,6 +198,7 @@ try
     {
         // Only enforce HTTPS outside Development; the dev http profile has no HTTPS port,
         // which otherwise logs "Failed to determine the https port for redirect".
+        app.UseHsts();
         app.UseHttpsRedirection();
     }
 

@@ -1,6 +1,7 @@
 using System.Globalization;
 using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Reporting;
+using ERP.Application.Common.Security;
 using ERP.Shared.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +15,22 @@ public sealed class GetInventoryValuationReportQueryHandler
     : IRequestHandler<GetInventoryValuationReportQuery, Result<ReportTable>>
 {
     private readonly IApplicationDbContext _db;
-    public GetInventoryValuationReportQueryHandler(IApplicationDbContext db) => _db = db;
+    private readonly IBranchScope _scope;
+
+    public GetInventoryValuationReportQueryHandler(IApplicationDbContext db, IBranchScope scope)
+    {
+        _db = db;
+        _scope = scope;
+    }
 
     public async Task<Result<ReportTable>> Handle(GetInventoryValuationReportQuery request, CancellationToken ct)
     {
         var query = _db.InventoryItems.AsNoTracking();
+
+        // Omitting warehouseId must not widen the export past the caller's branch.
+        if (await _scope.AllowedWarehouseIdsAsync(ct) is { } allowed)
+            query = query.Where(i => allowed.Contains(i.WarehouseId));
+
         if (request.WarehouseId is { } wh) query = query.Where(i => i.WarehouseId == wh);
 
         var rows = await query

@@ -1,4 +1,5 @@
 using ERP.Application.Common.Interfaces;
+using ERP.Application.Common.Security;
 using ERP.Shared.Results;
 using FluentValidation;
 using MediatR;
@@ -23,7 +24,13 @@ public sealed class SetReorderLevelCommandValidator : AbstractValidator<SetReord
 public sealed class SetReorderLevelCommandHandler : IRequestHandler<SetReorderLevelCommand, Result>
 {
     private readonly IApplicationDbContext _db;
-    public SetReorderLevelCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly IBranchScope _scope;
+
+    public SetReorderLevelCommandHandler(IApplicationDbContext db, IBranchScope scope)
+    {
+        _db = db;
+        _scope = scope;
+    }
 
     public async Task<Result> Handle(SetReorderLevelCommand request, CancellationToken ct)
     {
@@ -31,6 +38,8 @@ public sealed class SetReorderLevelCommandHandler : IRequestHandler<SetReorderLe
             return Result.Failure(Error.Validation("Product does not exist."));
         if (!await _db.Warehouses.AnyAsync(w => w.Id == request.WarehouseId, ct))
             return Result.Failure(Error.Validation("Warehouse does not exist."));
+        if (!await _scope.CanAccessWarehouseAsync(request.WarehouseId, ct))
+            return Result.Failure(Error.Unauthorized("Warehouse is outside your branch."));
 
         var item = await InventoryItemLoader.GetOrCreateAsync(_db, request.ProductId, request.WarehouseId, ct);
         item.ReorderLevel = request.ReorderLevel;

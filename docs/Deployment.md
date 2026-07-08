@@ -84,18 +84,30 @@ docker build -t nautilus-client ./client
 |---------|---------|-------|
 | JWT signing key | `Jwt__SigningKey` | ≥ 32 chars. **Startup fails** outside Development if it's the dev default or too short. |
 | SQL connection | `ConnectionStrings__DefaultConnection` | with `Database__Provider=SqlServer` |
-| Bootstrap admin | `Seed__AdminEmail` / `Seed__AdminPassword` | optional; seeds on first run |
+| Bootstrap admin | `Seed__AdminEmail` / `Seed__AdminPassword` | Optional. **No administrator is seeded unless you set these** — the demo credentials live in `appsettings.Development.json` and never load in Production. Startup fails outside Development if the password is weak or is the demo one. |
 | Allowed origins | `Cors__AllowedOrigins__0` | the SPA origin(s) |
+| Allowed hosts | `AllowedHosts` | your deployment hostname, to reject host-header spoofing |
 
 Local secrets in Development: `dotnet user-secrets` on `src/ERP.API`.
 
+> **Why the seeded admin is not in `appsettings.json`.** That file loads in *every* environment.
+> A password there is a known-credential administrator on any public deployment — the first thing
+> an automated scanner tries. Development values live in `appsettings.Development.json`.
+
 ## Hardening (M11)
+- **Behind a proxy** (Render, nginx, any load balancer) `UseForwardedHeaders` runs first, so
+  `X-Forwarded-Proto`/`-For` are honoured. Without it the HTTPS redirect loops and — worse —
+  every client shares one rate-limit partition, turning the brute-force defence into a DoS.
+  It trusts those headers unconditionally, so **never expose the container directly**.
 - **Rate limiting**: `/api/auth` at `RateLimiting:AuthPerMinute` (default 20/min/IP), other
   endpoints at `RateLimiting:GeneralPerMinute` (200/min/IP). Disabled under the Testing env.
-- **Response compression** and baseline **security headers** (`X-Content-Type-Options`,
-  `X-Frame-Options`, `Referrer-Policy`) on every response.
-- **HTTPS redirection** is enforced outside Development.
+- **Response compression** and **security headers** (`X-Content-Type-Options`, `X-Frame-Options`,
+  `Referrer-Policy`, `Permissions-Policy`, and a `default-src 'none'` CSP outside Development).
+  The SPA's own CSP lives in `client/nginx.conf`, since nginx serves the HTML.
+- **HTTPS redirection** and **HSTS** are enforced outside Development.
 - **Health**: `GET /health` includes a live database connectivity check.
+- **Session revocation**: deactivating a user revokes their live refresh tokens immediately, and
+  replaying a rotated refresh token revokes the entire token family (reuse detection).
 
 ## Notes
 - Logs roll daily to `src/ERP.API/logs/erp-*.log` (14-file retention).

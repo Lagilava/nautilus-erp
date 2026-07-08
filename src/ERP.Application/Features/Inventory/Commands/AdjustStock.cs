@@ -1,4 +1,5 @@
 using ERP.Application.Common.Interfaces;
+using ERP.Application.Common.Security;
 using ERP.Domain.Inventory;
 using ERP.Shared.Results;
 using FluentValidation;
@@ -38,15 +39,22 @@ public sealed class AdjustStockCommandHandler : IRequestHandler<AdjustStockComma
 {
     private readonly IApplicationDbContext _db;
     private readonly IDateTime _clock;
+    private readonly IBranchScope _scope;
 
-    public AdjustStockCommandHandler(IApplicationDbContext db, IDateTime clock)
+    public AdjustStockCommandHandler(IApplicationDbContext db, IDateTime clock, IBranchScope scope)
     {
         _db = db;
         _clock = clock;
+        _scope = scope;
     }
 
     public async Task<Result<Guid>> Handle(AdjustStockCommand request, CancellationToken ct)
     {
+        // This is the only command that can create or destroy stock with no counterparty
+        // document, so the branch guard runs before anything else.
+        if (!await _scope.CanAccessWarehouseAsync(request.WarehouseId, ct))
+            return Result.Failure<Guid>(Error.Unauthorized("Warehouse is outside your branch."));
+
         var item = await _db.InventoryItems
             .Include(i => i.Layers)
             .FirstOrDefaultAsync(i => i.ProductId == request.ProductId && i.WarehouseId == request.WarehouseId, ct);

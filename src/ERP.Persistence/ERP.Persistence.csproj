@@ -16,6 +16,12 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
+    <!-- EF's Sqlite 9.0.0 resolves SQLitePCLRaw 2.1.10 (GHSA-2m69-gcr7-jv3q). Only the dev
+         provider uses it, but the native library still ships in the image, so pin the patched
+         bundle AND the native lib it wraps - the advisory is against the lib, and the bundle
+         alone does not float it forward. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
   </ItemGroup>
 
   <PropertyGroup>
