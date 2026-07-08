@@ -39,12 +39,12 @@ public static class DependencyInjection
         services.AddSingleton<IInvoiceDocumentRenderer, Reporting.InvoiceDocumentRenderer>();
 
         AddJwtAuthentication(services, configuration);
-        AddNotifications(services);
+        AddNotifications(services, configuration);
 
         return services;
     }
 
-    private static void AddNotifications(IServiceCollection services)
+    private static void AddNotifications(IServiceCollection services, IConfiguration configuration)
     {
         // Real-time notifications over SignalR.
         services.AddSignalR();
@@ -59,8 +59,15 @@ public static class DependencyInjection
         services.AddHangfireServer();
 
         services.AddScoped<IEmailQueue, HangfireEmailQueue>();
-        services.AddScoped<IEmailSender, LoggingEmailSender>();
         services.AddScoped<EmailDispatchJob>();
+
+        // Real SMTP delivery when "Smtp:Host" is configured; otherwise the logging stub, which
+        // keeps local development free of an external dependency.
+        services.Configure<Notifications.SmtpSettings>(configuration.GetSection(Notifications.SmtpSettings.SectionName));
+        if (!string.IsNullOrWhiteSpace(configuration[$"{Notifications.SmtpSettings.SectionName}:Host"]))
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        else
+            services.AddScoped<IEmailSender, LoggingEmailSender>();
     }
 
     private static void AddJwtAuthentication(IServiceCollection services, IConfiguration configuration)

@@ -130,6 +130,20 @@ try
         if (!string.IsNullOrEmpty(seedPassword) && (seedPassword.Length < 12 || seedPassword.Contains("Admin#")))
             throw new InvalidOperationException(
                 "Seed:AdminPassword must be a strong secret supplied via secrets/env in non-Development environments, or omitted entirely.");
+
+        // If a real SMTP host is configured, it must be configured completely — a half-set SMTP
+        // section would otherwise fail silently at send time (inside a retried Hangfire job)
+        // instead of at boot, and every password-reset/notification email would quietly vanish.
+        var smtpHost = builder.Configuration["Smtp:Host"];
+        if (!string.IsNullOrEmpty(smtpHost))
+        {
+            var smtpPassword = builder.Configuration["Smtp:Password"];
+            var smtpFrom = builder.Configuration["Smtp:FromAddress"];
+            if (string.IsNullOrEmpty(smtpPassword) || string.IsNullOrEmpty(smtpFrom))
+                throw new InvalidOperationException(
+                    "Smtp:Host is set, so Smtp:FromAddress and Smtp:Password (supplied via the Smtp__Password " +
+                    "environment variable) are both required in non-Development environments.");
+        }
     }
 
     var app = builder.Build();
