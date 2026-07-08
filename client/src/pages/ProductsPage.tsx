@@ -8,7 +8,7 @@ import { Plus, Search } from 'lucide-react';
 import { api, apiErrorMessage } from '../lib/api';
 import type { Paged, Product, Category, UnitOfMeasure, Tax } from '../lib/types';
 import { fmtMoney } from '../lib/format';
-import { PageHeader, Loading, EmptyState, ErrorNote, StatusPill, Spinner } from '../components/ui';
+import { PageHeader, Loading, TableSkeleton, EmptyState, ErrorNote, StatusPill, Spinner } from '../components/ui';
 import { Pagination } from '../components/Pagination';
 import { Modal } from '../components/Modal';
 import { useToast } from '../components/Toast';
@@ -62,7 +62,7 @@ export function ProductsPage() {
         </div>
 
         {isLoading ? (
-          <Loading />
+          <TableSkeleton cols={6} />
         ) : error ? (
           <div className="p-4">
             <ErrorNote message={apiErrorMessage(error)} />

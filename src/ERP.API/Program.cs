@@ -117,6 +117,19 @@ try
         var initialiser = scope.ServiceProvider.GetRequiredService<ApplicationDbContextInitialiser>();
         await initialiser.MigrateAsync();
         await initialiser.SeedAsync();
+
+        // Seed comprehensive demo data when DEMO_DATA environment variable is set to "true"
+        // or when running in Development environment.
+        if (app.Environment.IsDevelopment() ||
+            builder.Configuration.GetValue("DemoData:Seed", false))
+        {
+            Log.Information("Seeding demo data for demonstration...");
+            var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+            var demoLogger = loggerFactory.CreateLogger("DemoDataSeeder");
+            await ERP.Persistence.DemoDataSeeder.SeedAsync(
+                scope.ServiceProvider,
+                demoLogger);
+        }
     }
 
     app.UseResponseCompression();

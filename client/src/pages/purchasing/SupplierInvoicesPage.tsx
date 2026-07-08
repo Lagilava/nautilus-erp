@@ -5,7 +5,7 @@ import { api, apiErrorMessage } from '../../lib/api';
 import type { Paged, SupplierInvoiceSummary } from '../../lib/types';
 import { fmtMoney, fmtDate } from '../../lib/format';
 import { statusTone, humanize } from '../../lib/status';
-import { PageHeader, Loading, EmptyState, ErrorNote, StatusPill } from '../../components/ui';
+import { PageHeader, TableSkeleton, EmptyState, ErrorNote, StatusPill } from '../../components/ui';
 import { Pagination } from '../../components/Pagination';
 import { useSuppliers } from '../../lib/pickers';
 
@@ -30,7 +30,7 @@ export function SupplierInvoicesPage() {
 
       <div className="card overflow-hidden">
         {isLoading ? (
-          <Loading />
+          <TableSkeleton cols={6} />
         ) : error ? (
           <div className="p-4">
             <ErrorNote message={apiErrorMessage(error)} />

@@ -5,6 +5,7 @@ import type { Category, UnitOfMeasure, Warehouse } from '../../lib/types';
 import { PageHeader } from '../../components/ui';
 import { ReferenceManager } from './ReferenceManager';
 import { TaxesManager } from './TaxesManager';
+import { CompanyManager } from './CompanyManager';
 
 interface Branch {
   id: string;
@@ -16,11 +17,11 @@ interface Branch {
   isActive: boolean;
 }
 
-const TABS = ['Taxes', 'Warehouses', 'Branches', 'Categories', 'Units'] as const;
+const TABS = ['Company', 'Taxes', 'Warehouses', 'Branches', 'Categories', 'Units'] as const;
 type Tab = (typeof TABS)[number];
 
 export function SettingsPage() {
-  const [tab, setTab] = useState<Tab>('Taxes');
+  const [tab, setTab] = useState<Tab>('Company');
 
   // Branches drive the warehouse picker.
   const branches = useQuery({
@@ -45,6 +46,8 @@ export function SettingsPage() {
           </button>
         ))}
       </div>
+
+      {tab === 'Company' && <CompanyManager />}
 
       {tab === 'Taxes' && <TaxesManager />}
 

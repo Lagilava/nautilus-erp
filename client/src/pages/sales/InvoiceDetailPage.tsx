@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, Ban, Plus } from 'lucide-react';
+import { Send, Ban, Plus, Download } from 'lucide-react';
 import { api, apiErrorMessage } from '../../lib/api';
+import { downloadFile } from '../../lib/download';
 import type { InvoiceDetail, PaymentRecord, PaymentMethod } from '../../lib/types';
 import { fmtMoney, fmtDate } from '../../lib/format';
 import { statusTone, humanize, PAYMENT_METHODS } from '../../lib/status';
@@ -53,7 +54,14 @@ export function InvoiceDetailPage() {
       title={inv.number}
       status={inv.status}
       actions={
-        canWrite && (
+        <>
+          <button
+            className="btn-secondary"
+            onClick={() => downloadFile(`/api/invoices/${id}/pdf`, `invoice-${inv.number}.pdf`)}
+          >
+            <Download className="h-4 w-4" /> Tax invoice PDF
+          </button>
+          {canWrite && (
           <>
             {inv.status === 'Draft' && (
               <button className="btn-primary" disabled={action.isPending} onClick={() => action.mutate('issue')}>
@@ -72,7 +80,8 @@ export function InvoiceDetailPage() {
             )}
             {action.isPending && <Spinner className="h-4 w-4" />}
           </>
-        )
+          )}
+        </>
       }
     >
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

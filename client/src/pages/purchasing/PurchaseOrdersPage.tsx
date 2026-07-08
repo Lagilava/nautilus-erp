@@ -6,7 +6,7 @@ import { api, apiErrorMessage } from '../../lib/api';
 import type { Paged, PurchaseOrderSummary } from '../../lib/types';
 import { fmtMoney, fmtDate } from '../../lib/format';
 import { statusTone, humanize } from '../../lib/status';
-import { PageHeader, Loading, EmptyState, ErrorNote, StatusPill, Spinner } from '../../components/ui';
+import { PageHeader, Loading, TableSkeleton, EmptyState, ErrorNote, StatusPill, Spinner } from '../../components/ui';
 import { Pagination } from '../../components/Pagination';
 import { Modal } from '../../components/Modal';
 import { LineItemsEditor, type LineDraft } from '../../components/LineItemsEditor';
@@ -49,7 +49,7 @@ export function PurchaseOrdersPage() {
 
       <div className="card overflow-hidden">
         {isLoading ? (
-          <Loading />
+          <TableSkeleton cols={5} />
         ) : error ? (
           <div className="p-4">
             <ErrorNote message={apiErrorMessage(error)} />

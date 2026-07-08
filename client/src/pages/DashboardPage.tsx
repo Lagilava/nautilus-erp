@@ -2,14 +2,13 @@ import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   ResponsiveContainer,
   Tooltip,
   CartesianGrid,
-  Cell,
 } from 'recharts';
 import {
   Boxes,
@@ -35,6 +34,12 @@ interface AuditEntry {
   action: string;
   userId?: string | null;
   timestamp: string;
+}
+
+interface TrendPoint {
+  month: string;
+  label: string;
+  total: number;
 }
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
@@ -69,16 +74,14 @@ export function DashboardPage() {
       (await api.get<Paged<InvoiceSummary>>('/api/invoices', { params: { page: 1, pageSize: 5 } })).data,
     enabled: isAdmin,
   });
+  const trend = useQuery({
+    queryKey: ['dashboard-trend'],
+    queryFn: async () => (await api.get<TrendPoint[]>('/api/dashboard/sales-trend')).data,
+  });
 
   if (isLoading) return <Loading />;
   if (error) return <ErrorNote message={apiErrorMessage(error)} />;
   if (!data) return null;
-
-  const chart = [
-    { name: 'Sales (mo)', value: data.salesThisMonth, fill: '#0E7367' },
-    { name: 'Receivable', value: data.accountsReceivable, fill: '#3F9385' },
-    { name: 'Payable', value: data.accountsPayable, fill: '#B98B3E' },
-  ];
 
   return (
     <>
@@ -114,13 +117,19 @@ export function DashboardPage() {
         <div className="card p-5 lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-lagoon-500" />
-            <h2 className="text-base font-semibold text-ink">Financial snapshot</h2>
+            <h2 className="text-base font-semibold text-ink">Invoiced sales — last 6 months</h2>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chart} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+              <AreaChart data={trend.data ?? []} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+                <defs>
+                  <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0E7367" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#0E7367" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid vertical={false} stroke="#E7E3DA" />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: '#697974', fontSize: 12 }} />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: '#697974', fontSize: 12 }} />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
@@ -129,16 +138,18 @@ export function DashboardPage() {
                   tickFormatter={(v) => fmtMoney(v).replace('FJ$', '$')}
                 />
                 <Tooltip
-                  cursor={{ fill: '#E9F3F1' }}
                   formatter={(value) => fmtMoney(Number(value))}
                   contentStyle={{ borderRadius: 8, border: '1px solid #E7E3DA', fontSize: 13 }}
                 />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={72}>
-                  {chart.map((c) => (
-                    <Cell key={c.name} fill={c.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#0E7367"
+                  strokeWidth={2}
+                  fill="url(#salesFill)"
+                  dot={{ r: 3, fill: '#0E7367' }}
+                />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>

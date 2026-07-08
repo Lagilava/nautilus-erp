@@ -7,7 +7,7 @@ import { Plus, Search } from 'lucide-react';
 import { api, apiErrorMessage } from '../lib/api';
 import type { Paged, Customer } from '../lib/types';
 import { fmtMoney } from '../lib/format';
-import { PageHeader, Loading, EmptyState, ErrorNote, StatusPill, Spinner } from '../components/ui';
+import { PageHeader, TableSkeleton, EmptyState, ErrorNote, StatusPill, Spinner } from '../components/ui';
 import { Pagination } from '../components/Pagination';
 import { Modal } from '../components/Modal';
 import { useToast } from '../components/Toast';
@@ -58,7 +58,7 @@ export function CustomersPage() {
         </div>
 
         {isLoading ? (
-          <Loading />
+          <TableSkeleton cols={5} />
         ) : error ? (
           <div className="p-4">
             <ErrorNote message={apiErrorMessage(error)} />

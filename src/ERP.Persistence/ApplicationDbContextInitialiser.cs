@@ -1,5 +1,6 @@
 using ERP.Persistence.Identity;
 using ERP.Shared.Authorization;
+using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -45,6 +46,20 @@ public sealed class ApplicationDbContextInitialiser
 
     public async Task SeedAsync()
     {
+        if (_db.Database.IsSqlite() && await IsSqliteSchemaIncompleteAsync())
+        {
+            _logger.LogWarning(
+                "SQLite schema was incomplete during startup seed; recreating the local database before continuing.");
+
+            await _db.Database.EnsureDeletedAsync();
+            await _db.Database.EnsureCreatedAsync();
+        }
+
+        await SeedCoreAsync();
+    }
+
+    private async Task SeedCoreAsync()
+    {
         foreach (var role in Roles.All)
         {
             if (!await _roleManager.RoleExistsAsync(role))
@@ -85,5 +100,41 @@ public sealed class ApplicationDbContextInitialiser
                     string.Join(", ", created.Errors.Select(e => e.Description)));
             }
         }
+    }
+
+
+    private async Task<bool> IsSqliteSchemaIncompleteAsync()
+    {
+        var connection = _db.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != System.Data.ConnectionState.Open;
+
+        if (shouldCloseConnection)
+            await connection.OpenAsync();
+
+        try
+        {
+            return !await TableExistsAsync(connection, "CompanyProfiles")
+                   || !await TableExistsAsync(connection, "AspNetUsers")
+                   || !await TableExistsAsync(connection, "AspNetRoles");
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+                await connection.CloseAsync();
+        }
+    }
+
+    private static async Task<bool> TableExistsAsync(System.Data.Common.DbConnection connection, string tableName)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = $name)";
+
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "$name";
+        parameter.Value = tableName;
+        command.Parameters.Add(parameter);
+
+        var result = await command.ExecuteScalarAsync();
+        return Convert.ToInt32(result) == 1;
     }
 }
