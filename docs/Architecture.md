@@ -28,7 +28,9 @@ ERP.API           (thin controllers, HTTP ↔ MediatR; refs Application, Infra, 
 Three layers, applied in order:
 
 1. **Role-based** — `Administrator`, `Manager`, `Staff`, via `[Authorize(Roles = …)]`.
-   Customers never sign in; the ERP is a staff system.
+   Customers never sign in; the ERP is a staff system. Role and duty are different axes:
+   Staff hold the *warehouse* duty (they post goods receipts) but approving spend — raising,
+   confirming, or cancelling a purchase order — stays with Managers and Administrators.
 2. **Branch scoping** (record-level) — a `branch` JWT claim narrows every warehouse-bound
    query and write through `IBranchScope`. A user with no branch is unrestricted.
 3. **Segregation of duties** (`Common/Security/SegregationOfDuties.cs`) — maker-checker on the

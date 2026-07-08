@@ -14,6 +14,13 @@ public sealed class PurchaseOrdersController : ApiControllerBase
 {
     private const string Writers = $"{Roles.Administrator},{Roles.Manager}";
 
+    /// <summary>
+    /// Receiving is a warehouse duty, not an approval duty. Staff post receipts; only Managers
+    /// and Administrators raise, approve, or cancel orders. Segregation of duties then keeps the
+    /// raiser and the approver away from the receipt itself.
+    /// </summary>
+    private const string Receivers = $"{Roles.Administrator},{Roles.Manager},{Roles.Staff}";
+
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] GetPurchaseOrdersQuery query, CancellationToken ct)
         => HandleResult(await Sender.Send(query, ct));
@@ -38,7 +45,7 @@ public sealed class PurchaseOrdersController : ApiControllerBase
         => HandleResult(await Sender.Send(new CancelPurchaseOrderCommand(id), ct));
 
     [HttpPost("{id:guid}/receipts")]
-    [Authorize(Roles = Writers)]
+    [Authorize(Roles = Receivers)]
     public async Task<IActionResult> Receive(Guid id, PostGoodsReceiptCommand command, CancellationToken ct)
         => id != command.PurchaseOrderId
             ? BadRequest("Route id and body purchaseOrderId must match.")

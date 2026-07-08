@@ -48,7 +48,7 @@ public class PurchasingFlowEndpointTests : IClassFixture<ErpWebApplicationFactor
         var client = await AdminClientAsync();
         var buyer = await _factory.ClientForNewUserAsync("Manager");
         var approver = await _factory.ClientForNewUserAsync("Manager");
-        var storeman = await _factory.ClientForNewUserAsync("Manager");
+        var storeman = await _factory.ClientForNewUserAsync("Staff");
         var payables = await _factory.ClientForNewUserAsync("Manager");
         var treasury = await _factory.ClientForNewUserAsync("Manager");
         var s = Guid.NewGuid().ToString("N")[..8];
@@ -126,7 +126,7 @@ public class PurchasingFlowEndpointTests : IClassFixture<ErpWebApplicationFactor
     {
         var client = await AdminClientAsync();
         var buyer = await _factory.ClientForNewUserAsync("Manager");
-        var storeman = await _factory.ClientForNewUserAsync("Manager");
+        var storeman = await _factory.ClientForNewUserAsync("Staff");
         var s = Guid.NewGuid().ToString("N")[..8];
         var uom = await IdAsync(await client.PostAsJsonAsync("/api/units-of-measure", new { code = $"EA{s}", name = "Each" }));
         var cat = await IdAsync(await client.PostAsJsonAsync("/api/categories",

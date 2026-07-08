@@ -106,6 +106,26 @@ public class SegregationOfDutiesEndpointTests : IClassFixture<ErpWebApplicationF
         approved.EnsureSuccessStatusCode();
     }
 
+    /// <summary>
+    /// Role and duty are different axes. Staff hold the warehouse duty — they post receipts — but
+    /// approving spend stays with Managers, so a storeman can never confirm an order.
+    /// </summary>
+    [Fact]
+    public async Task Staff_may_receive_goods_but_never_approve_a_purchase_order()
+    {
+        var admin = await _factory.AdminClientAsync();
+        var f = await SeedAsync(admin);
+        var maker = await _factory.ClientForNewUserAsync("Manager");
+        var storeman = await _factory.ClientForNewUserAsync("Staff");
+
+        var poId = await IdAsync(await CreatePoAsync(maker, f));
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await storeman.PostAsync($"/api/purchase-orders/{poId}/confirm", null)).StatusCode);
+
+        (await admin.PostAsync($"/api/purchase-orders/{poId}/confirm", null)).EnsureSuccessStatusCode();
+        (await ReceiveAsync(storeman, poId, await FirstLineIdAsync(admin, poId))).EnsureSuccessStatusCode();
+    }
+
     [Fact]
     public async Task Goods_cannot_be_received_by_the_raiser_or_the_approver()
     {
@@ -113,7 +133,7 @@ public class SegregationOfDutiesEndpointTests : IClassFixture<ErpWebApplicationF
         var f = await SeedAsync(admin);
         var maker = await _factory.ClientForNewUserAsync("Manager");
         var checker = await _factory.ClientForNewUserAsync("Manager");
-        var storeman = await _factory.ClientForNewUserAsync("Manager");
+        var storeman = await _factory.ClientForNewUserAsync("Staff");
 
         var poId = await IdAsync(await CreatePoAsync(maker, f));
         (await checker.PostAsync($"/api/purchase-orders/{poId}/confirm", null)).EnsureSuccessStatusCode();
@@ -133,7 +153,7 @@ public class SegregationOfDutiesEndpointTests : IClassFixture<ErpWebApplicationF
         var f = await SeedAsync(admin);
         var maker = await _factory.ClientForNewUserAsync("Manager");
         var checker = await _factory.ClientForNewUserAsync("Manager");
-        var storeman = await _factory.ClientForNewUserAsync("Manager");
+        var storeman = await _factory.ClientForNewUserAsync("Staff");
         var payables = await _factory.ClientForNewUserAsync("Manager");
         var treasury = await _factory.ClientForNewUserAsync("Manager");
 
