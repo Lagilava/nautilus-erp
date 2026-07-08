@@ -36,17 +36,22 @@ Liveness/readiness probe.
 ## Authentication (`/api/auth`)
 
 JWT bearer. Access tokens are short-lived (15 min); refresh tokens are long-lived (7 days),
-stored server-side, and **rotated on every refresh** (reuse of a consumed token is rejected).
+stored server-side (SHA-256 hashed), and **rotated on every refresh** (reuse of a consumed
+token is rejected).
+
+There is **no public registration**. Accounts are created by an administrator via
+`POST /api/users` — this is a staff system, and customers never sign in.
 
 | Method | Route | Auth | Body | Success |
 |--------|-------|------|------|---------|
-| POST | `/api/auth/register` | anon | `{ email, password, firstName, lastName }` | 200 `AuthenticationResult` |
 | POST | `/api/auth/login` | anon | `{ email, password }` | 200 `AuthenticationResult` |
 | POST | `/api/auth/refresh` | anon | `{ refreshToken }` | 200 `AuthenticationResult` |
 | POST | `/api/auth/logout` | bearer | `{ refreshToken }` | 204 |
-| POST | `/api/auth/forgot-password` | anon | `{ email }` | 200 (token, never reveals existence) |
+| POST | `/api/auth/forgot-password` | anon | `{ email }` | 204 always — emails the link, never reveals whether the account exists |
 | POST | `/api/auth/reset-password` | anon | `{ email, token, newPassword }` | 204 |
 | GET  | `/api/auth/me` | bearer | — | 200 `UserIdentity` |
+| PUT  | `/api/auth/me` | bearer | `{ firstName, lastName }` | 204 |
+| POST | `/api/auth/change-password` | bearer | `{ currentPassword, newPassword }` | 204 |
 
 `AuthenticationResult`: `{ userId, email, roles[], accessToken, accessTokenExpiresAt, refreshToken }`.
 
