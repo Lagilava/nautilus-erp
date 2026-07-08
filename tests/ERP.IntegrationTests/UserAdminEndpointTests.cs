@@ -74,14 +74,7 @@ public class UserAdminEndpointTests : IClassFixture<ErpWebApplicationFactory>
     [Fact]
     public async Task User_admin_is_forbidden_for_non_admins()
     {
-        var client = _factory.CreateClient();
-        var email = $"staff-{Guid.NewGuid():N}@erp.local";
-        var register = await client.PostAsJsonAsync("/api/auth/register", new
-        {
-            email, password = "Str0ng#Pass1", firstName = "S", lastName = "T",
-        });
-        var auth = await register.Content.ReadFromJsonAsync<AuthResponse>(Json);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+        var client = await _factory.ClientForNewUserAsync("Manager");
 
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/users")).StatusCode);
     }

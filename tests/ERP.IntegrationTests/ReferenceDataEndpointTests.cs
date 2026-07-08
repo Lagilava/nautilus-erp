@@ -82,14 +82,7 @@ public class ReferenceDataEndpointTests : IClassFixture<ErpWebApplicationFactory
     [Fact]
     public async Task Staff_user_cannot_create_reference_data()
     {
-        var client = _factory.CreateClient();
-        var email = $"staff-{Guid.NewGuid():N}@erp.local";
-        var register = await client.PostAsJsonAsync("/api/auth/register", new
-        {
-            email, password = "Str0ng#Pass1", firstName = "S", lastName = "T"
-        });
-        var auth = await register.Content.ReadFromJsonAsync<AuthResponse>(Json);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+        var client = await _factory.ClientForNewUserAsync("Staff");
 
         var response = await client.PostAsJsonAsync("/api/units-of-measure", new { code = "XX", name = "Nope" });
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);

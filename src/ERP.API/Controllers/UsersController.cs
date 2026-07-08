@@ -32,4 +32,11 @@ public sealed class UsersController : ApiControllerBase
     [HttpPost("{id:guid}/active")]
     public async Task<IActionResult> SetActive(Guid id, [FromBody] bool isActive, CancellationToken ct)
         => HandleResult(await Sender.Send(new SetUserActiveCommand(id, isActive), ct));
+
+    /// <summary>Scopes a user to a branch (null clears the scope). Record-level security.</summary>
+    [HttpPut("{id:guid}/branch")]
+    public async Task<IActionResult> SetBranch(Guid id, SetUserBranchCommand command, CancellationToken ct)
+        => id != command.UserId
+            ? BadRequest("Route id and body userId must match.")
+            : HandleResult(await Sender.Send(command, ct));
 }

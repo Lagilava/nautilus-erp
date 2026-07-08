@@ -9,6 +9,11 @@ import { useToast } from '../../components/Toast';
 
 const ALL_ROLES = ['Administrator', 'Manager', 'Staff'];
 
+interface BranchOption {
+  id: string;
+  name: string;
+}
+
 export function UsersPage() {
   const qc = useQueryClient();
   const toast = useToast();
@@ -17,6 +22,21 @@ export function UsersPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['users'],
     queryFn: async () => (await api.get<UserAccount[]>('/api/users')).data,
+  });
+
+  const branches = useQuery({
+    queryKey: ['branches'],
+    queryFn: async () => (await api.get<BranchOption[]>('/api/branches')).data,
+  });
+
+  const setBranch = useMutation({
+    mutationFn: ({ id, branchId }: { id: string; branchId: string | null }) =>
+      api.put(`/api/users/${id}/branch`, { userId: id, branchId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] });
+      toast('Branch scope updated.');
+    },
+    onError: (e) => toast(apiErrorMessage(e), 'error'),
   });
 
   const setActive = useMutation({
@@ -56,6 +76,7 @@ export function UsersPage() {
                   <th className="table-head px-4 py-3">Name</th>
                   <th className="table-head px-4 py-3">Email</th>
                   <th className="table-head px-4 py-3">Roles</th>
+                  <th className="table-head px-4 py-3">Branch scope</th>
                   <th className="table-head px-4 py-3">Status</th>
                   <th className="table-head px-4 py-3 text-right">Actions</th>
                 </tr>
@@ -73,6 +94,23 @@ export function UsersPage() {
                           <StatusPill key={r} label={r} tone="neutral" />
                         ))}
                       </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {/* Record-level security: null = sees every branch. */}
+                      <select
+                        aria-label={`Branch scope for ${u.email}`}
+                        className="input py-1 text-xs"
+                        value={u.branchId ?? ''}
+                        disabled={setBranch.isPending}
+                        onChange={(e) => setBranch.mutate({ id: u.id, branchId: e.target.value || null })}
+                      >
+                        <option value="">All branches</option>
+                        {branches.data?.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-4 py-3">
                       <StatusPill label={u.isActive ? 'Active' : 'Disabled'} tone={u.isActive ? 'success' : 'danger'} />
@@ -112,13 +150,19 @@ function NewUserModal({ onClose }: { onClose: () => void }) {
   const toast = useToast();
   const [form, setForm] = useState({ email: '', password: '', firstName: '', lastName: '' });
   const [roles, setRoles] = useState<string[]>(['Staff']);
+  const [branchId, setBranchId] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const branches = useQuery({
+    queryKey: ['branches'],
+    queryFn: async () => (await api.get<BranchOption[]>('/api/branches')).data,
+  });
 
   const toggleRole = (r: string) =>
     setRoles((prev) => (prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]));
 
   const mutation = useMutation({
-    mutationFn: () => api.post<string>('/api/users', { ...form, roles }),
+    mutationFn: () => api.post<string>('/api/users', { ...form, roles, branchId: branchId || null }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] });
       toast('User created.');
@@ -169,6 +213,20 @@ function NewUserModal({ onClose }: { onClose: () => void }) {
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
+        </div>
+        <div>
+          <label className="field-label">Branch scope</label>
+          <select className="input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+            <option value="">All branches (unrestricted)</option>
+            {branches.data?.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-ink-muted">
+            Scoped users only see stock, sales, and purchasing for their branch.
+          </p>
         </div>
         <div>
           <label className="field-label">Roles</label>

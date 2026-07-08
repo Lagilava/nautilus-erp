@@ -12,24 +12,27 @@ public class RefreshToken : BaseEntity
 {
     public Guid UserId { get; set; }
 
-    /// <summary>Opaque high-entropy token value (hashed at rest is a later hardening step).</summary>
-    public string Token { get; set; } = string.Empty;
+    /// <summary>
+    /// SHA-256 hash of the opaque token. The raw value is returned to the client once and
+    /// never stored, so a database read cannot be replayed as a session.
+    /// </summary>
+    public string TokenHash { get; set; } = string.Empty;
 
     public DateTimeOffset ExpiresAt { get; set; }
 
     /// <summary>Set when the token is used (rotated) or explicitly revoked (logout).</summary>
     public DateTimeOffset? RevokedAt { get; set; }
 
-    /// <summary>Token that replaced this one on rotation — enables reuse detection.</summary>
-    public string? ReplacedByToken { get; set; }
+    /// <summary>Hash of the token that replaced this one on rotation — enables reuse detection.</summary>
+    public string? ReplacedByTokenHash { get; set; }
 
     public string? CreatedByIp { get; set; }
 
     public bool IsActive(DateTimeOffset now) => RevokedAt is null && ExpiresAt > now;
 
-    public void Revoke(DateTimeOffset now, string? replacedByToken = null)
+    public void Revoke(DateTimeOffset now, string? replacedByTokenHash = null)
     {
         RevokedAt = now;
-        ReplacedByToken = replacedByToken;
+        ReplacedByTokenHash = replacedByTokenHash;
     }
 }

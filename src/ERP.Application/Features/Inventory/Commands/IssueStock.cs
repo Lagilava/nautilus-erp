@@ -1,4 +1,5 @@
 using ERP.Application.Common.Interfaces;
+using ERP.Application.Common.Security;
 using ERP.Domain.Inventory;
 using ERP.Shared.Results;
 using FluentValidation;
@@ -31,15 +32,20 @@ public sealed class IssueStockCommandHandler : IRequestHandler<IssueStockCommand
 {
     private readonly IApplicationDbContext _db;
     private readonly IDateTime _clock;
+    private readonly IBranchScope _scope;
 
-    public IssueStockCommandHandler(IApplicationDbContext db, IDateTime clock)
+    public IssueStockCommandHandler(IApplicationDbContext db, IDateTime clock, IBranchScope scope)
     {
         _db = db;
         _clock = clock;
+        _scope = scope;
     }
 
     public async Task<Result<Guid>> Handle(IssueStockCommand request, CancellationToken ct)
     {
+        if (!await _scope.CanAccessWarehouseAsync(request.WarehouseId, ct))
+            return Result.Failure<Guid>(Error.Unauthorized("Warehouse is outside your branch."));
+
         var item = await _db.InventoryItems
             .Include(i => i.Layers)
             .FirstOrDefaultAsync(i => i.ProductId == request.ProductId && i.WarehouseId == request.WarehouseId, ct);

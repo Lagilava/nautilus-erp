@@ -12,6 +12,12 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Branch this user is scoped to. Null means unrestricted — the user sees every branch.
+    /// Drives record-level security on warehouse-bound data (stock, sales, purchasing).
+    /// </summary>
+    public Guid? BranchId { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }
 }

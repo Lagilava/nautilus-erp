@@ -1,5 +1,6 @@
 using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Models;
+using ERP.Application.Common.Security;
 using ERP.Domain.Common;
 using ERP.Domain.Purchasing;
 using ERP.Shared.Results;
@@ -88,11 +89,22 @@ public sealed class GetPurchaseOrdersQueryHandler
     : IRequestHandler<GetPurchaseOrdersQuery, Result<PagedResult<PurchaseOrderSummaryDto>>>
 {
     private readonly IApplicationDbContext _db;
-    public GetPurchaseOrdersQueryHandler(IApplicationDbContext db) => _db = db;
+    private readonly IBranchScope _scope;
+
+    public GetPurchaseOrdersQueryHandler(IApplicationDbContext db, IBranchScope scope)
+    {
+        _db = db;
+        _scope = scope;
+    }
 
     public async Task<Result<PagedResult<PurchaseOrderSummaryDto>>> Handle(GetPurchaseOrdersQuery request, CancellationToken ct)
     {
         var query = _db.PurchaseOrders.AsNoTracking().Include(o => o.Lines).AsQueryable();
+
+        // Purchase orders belong to a branch through their receiving warehouse.
+        if (await _scope.AllowedWarehouseIdsAsync(ct) is { } allowed)
+            query = query.Where(o => allowed.Contains(o.WarehouseId));
+
         if (request.SupplierId is { } sid) query = query.Where(o => o.SupplierId == sid);
         if (request.Status is { } st) query = query.Where(o => o.Status == st);
 

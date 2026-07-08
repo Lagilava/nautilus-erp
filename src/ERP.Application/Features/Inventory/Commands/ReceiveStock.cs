@@ -1,4 +1,5 @@
 using ERP.Application.Common.Interfaces;
+using ERP.Application.Common.Security;
 using ERP.Domain.Inventory;
 using ERP.Shared.Results;
 using FluentValidation;
@@ -33,11 +34,13 @@ public sealed class ReceiveStockCommandHandler : IRequestHandler<ReceiveStockCom
 {
     private readonly IApplicationDbContext _db;
     private readonly IDateTime _clock;
+    private readonly IBranchScope _scope;
 
-    public ReceiveStockCommandHandler(IApplicationDbContext db, IDateTime clock)
+    public ReceiveStockCommandHandler(IApplicationDbContext db, IDateTime clock, IBranchScope scope)
     {
         _db = db;
         _clock = clock;
+        _scope = scope;
     }
 
     public async Task<Result<Guid>> Handle(ReceiveStockCommand request, CancellationToken ct)
@@ -46,6 +49,8 @@ public sealed class ReceiveStockCommandHandler : IRequestHandler<ReceiveStockCom
             return Result.Failure<Guid>(Error.Validation("Product does not exist."));
         if (!await _db.Warehouses.AnyAsync(w => w.Id == request.WarehouseId, ct))
             return Result.Failure<Guid>(Error.Validation("Warehouse does not exist."));
+        if (!await _scope.CanAccessWarehouseAsync(request.WarehouseId, ct))
+            return Result.Failure<Guid>(Error.Unauthorized("Warehouse is outside your branch."));
 
         var item = await InventoryItemLoader.GetOrCreateAsync(_db, request.ProductId, request.WarehouseId, ct);
         var totalCost = item.Receive(request.Quantity, request.UnitCost);

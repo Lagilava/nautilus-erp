@@ -1,5 +1,6 @@
 using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Models;
+using ERP.Application.Common.Security;
 using ERP.Domain.Sales;
 using ERP.Shared.Results;
 using MediatR;
@@ -53,11 +54,22 @@ public sealed class GetSalesOrdersQueryHandler
     : IRequestHandler<GetSalesOrdersQuery, Result<PagedResult<SalesOrderSummaryDto>>>
 {
     private readonly IApplicationDbContext _db;
-    public GetSalesOrdersQueryHandler(IApplicationDbContext db) => _db = db;
+    private readonly IBranchScope _scope;
+
+    public GetSalesOrdersQueryHandler(IApplicationDbContext db, IBranchScope scope)
+    {
+        _db = db;
+        _scope = scope;
+    }
 
     public async Task<Result<PagedResult<SalesOrderSummaryDto>>> Handle(GetSalesOrdersQuery request, CancellationToken ct)
     {
         var query = _db.SalesOrders.AsNoTracking().Include(o => o.Lines).AsQueryable();
+
+        // Orders belong to a branch through their fulfilment warehouse.
+        if (await _scope.AllowedWarehouseIdsAsync(ct) is { } allowed)
+            query = query.Where(o => allowed.Contains(o.WarehouseId));
+
         if (request.CustomerId is { } cid) query = query.Where(o => o.CustomerId == cid);
         if (request.Status is { } st) query = query.Where(o => o.Status == st);
 

@@ -277,6 +277,9 @@ export interface UserAccount {
   lastName: string;
   roles: string[];
   isActive: boolean;
+  /** Branch scope; null = unrestricted (sees every branch). */
+  branchId?: string | null;
+  branchName?: string | null;
 }
 
 /** RFC 7807 problem-details as returned by the API on failure. */

@@ -1,4 +1,5 @@
 using ERP.Application.Common.Interfaces;
+using ERP.Application.Common.Security;
 using ERP.Domain.Inventory;
 using ERP.Shared.Results;
 using FluentValidation;
@@ -37,15 +38,22 @@ public sealed class TransferStockCommandHandler : IRequestHandler<TransferStockC
 {
     private readonly IApplicationDbContext _db;
     private readonly IDateTime _clock;
+    private readonly IBranchScope _scope;
 
-    public TransferStockCommandHandler(IApplicationDbContext db, IDateTime clock)
+    public TransferStockCommandHandler(IApplicationDbContext db, IDateTime clock, IBranchScope scope)
     {
         _db = db;
         _clock = clock;
+        _scope = scope;
     }
 
     public async Task<Result> Handle(TransferStockCommand request, CancellationToken ct)
     {
+        // A transfer touches two warehouses; the caller must be entitled to both ends.
+        if (!await _scope.CanAccessWarehouseAsync(request.FromWarehouseId, ct) ||
+            !await _scope.CanAccessWarehouseAsync(request.ToWarehouseId, ct))
+            return Result.Failure(Error.Unauthorized("Transfer involves a warehouse outside your branch."));
+
         var source = await _db.InventoryItems
             .Include(i => i.Layers)
             .FirstOrDefaultAsync(i => i.ProductId == request.ProductId && i.WarehouseId == request.FromWarehouseId, ct);

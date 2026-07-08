@@ -24,10 +24,10 @@ public class RefreshTokenTests
     public void IsActive_is_false_once_revoked()
     {
         var token = new RefreshToken { ExpiresAt = Now.AddDays(1) };
-        token.Revoke(Now, replacedByToken: "next-token");
+        token.Revoke(Now, replacedByTokenHash: "next-token-hash");
 
         Assert.False(token.IsActive(Now));
         Assert.Equal(Now, token.RevokedAt);
-        Assert.Equal("next-token", token.ReplacedByToken);
+        Assert.Equal("next-token-hash", token.ReplacedByTokenHash);
     }
 }

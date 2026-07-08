@@ -12,6 +12,9 @@ namespace ERP.Infrastructure.Identity;
 /// <summary>Issues HS256 JWT access tokens and cryptographically strong opaque refresh tokens.</summary>
 public sealed class TokenService : ITokenService
 {
+    /// <summary>Custom claim carrying the user's branch scope (absent = unrestricted).</summary>
+    public const string BranchClaim = "branch";
+
     private readonly JwtSettings _settings;
     private readonly IDateTime _clock;
 
@@ -35,6 +38,10 @@ public sealed class TokenService : ITokenService
             new(ClaimTypes.NameIdentifier, user.Id.ToString())
         };
         claims.AddRange(user.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+        // Branch scope travels in the token so record-level filters need no extra lookup.
+        if (user.BranchId is { } branchId)
+            claims.Add(new Claim(BranchClaim, branchId.ToString()));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SigningKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

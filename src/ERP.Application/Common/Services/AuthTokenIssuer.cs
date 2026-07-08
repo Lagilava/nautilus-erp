@@ -1,6 +1,7 @@
 using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Models;
 using ERP.Domain.Identity;
+using ERP.Shared.Security;
 
 namespace ERP.Application.Common.Services;
 
@@ -24,10 +25,11 @@ internal sealed class AuthTokenIssuer : IAuthTokenIssuer
         var access = _tokens.CreateAccessToken(user);
         var refresh = _tokens.GenerateRefreshToken();
 
+        // Only the hash is persisted; the raw token goes to the client and is never stored.
         _db.RefreshTokens.Add(new RefreshToken
         {
             UserId = user.Id,
-            Token = refresh,
+            TokenHash = TokenHasher.Hash(refresh),
             ExpiresAt = _clock.UtcNow.Add(_tokens.RefreshTokenLifetime),
             CreatedByIp = ipAddress
         });

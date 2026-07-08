@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
         services.AddScoped<IAuthTokenIssuer, AuthTokenIssuer>();
+        services.AddScoped<Common.Security.IBranchScope, Common.Security.BranchScope>();
 
         return services;
     }

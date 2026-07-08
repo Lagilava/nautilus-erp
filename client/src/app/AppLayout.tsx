@@ -78,15 +78,17 @@ export function AppLayout() {
           <div className="flex items-center gap-3">
             <NotificationBell />
             <div className="h-6 w-px bg-line" />
-            <div className="text-right">
-              <div className="text-sm font-medium text-ink">
-                {user?.firstName} {user?.lastName}
+            <NavLink to="/profile" className="flex items-center gap-3 rounded-md px-2 py-1 hover:bg-lagoon-50/60" title="My profile">
+              <div className="text-right">
+                <div className="text-sm font-medium text-ink">
+                  {user?.firstName} {user?.lastName}
+                </div>
+                <div className="text-xs text-ink-muted">{user?.roles.join(' · ')}</div>
               </div>
-              <div className="text-xs text-ink-muted">{user?.roles.join(' · ')}</div>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-lagoon-500 text-sm font-semibold uppercase text-white">
-              {initials || user?.email?.[0]?.toUpperCase()}
-            </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-lagoon-500 text-sm font-semibold uppercase text-white">
+                {initials || user?.email?.[0]?.toUpperCase()}
+              </div>
+            </NavLink>
             <button onClick={() => logout()} className="btn-ghost p-2" title="Sign out" aria-label="Sign out">
               <LogOut className="h-[18px] w-[18px]" />
             </button>

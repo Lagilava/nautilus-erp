@@ -12,4 +12,10 @@ public interface ICurrentUserService
     bool IsAuthenticated { get; }
     string? IpAddress { get; }
     string? UserAgent { get; }
+
+    /// <summary>
+    /// Branch the caller is scoped to, from the "branch" claim. Null means unrestricted —
+    /// the caller sees every branch's records.
+    /// </summary>
+    Guid? BranchId { get; }
 }

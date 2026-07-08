@@ -1,5 +1,6 @@
 using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Models;
+using ERP.Application.Common.Security;
 using ERP.Domain.Inventory;
 using ERP.Shared.Results;
 using MediatR;
@@ -30,11 +31,20 @@ public sealed class GetStockMovementsQueryHandler
     : IRequestHandler<GetStockMovementsQuery, Result<PagedResult<StockMovementDto>>>
 {
     private readonly IApplicationDbContext _db;
-    public GetStockMovementsQueryHandler(IApplicationDbContext db) => _db = db;
+    private readonly IBranchScope _scope;
+
+    public GetStockMovementsQueryHandler(IApplicationDbContext db, IBranchScope scope)
+    {
+        _db = db;
+        _scope = scope;
+    }
 
     public async Task<Result<PagedResult<StockMovementDto>>> Handle(GetStockMovementsQuery request, CancellationToken ct)
     {
         var query = _db.StockMovements.AsNoTracking();
+
+        if (await _scope.AllowedWarehouseIdsAsync(ct) is { } allowed)
+            query = query.Where(m => allowed.Contains(m.WarehouseId));
 
         if (request.ProductId is { } pid) query = query.Where(m => m.ProductId == pid);
         if (request.WarehouseId is { } wid) query = query.Where(m => m.WarehouseId == wid);

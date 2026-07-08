@@ -27,6 +27,7 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<App
         public bool IsAuthenticated => false;
         public string? IpAddress => null;
         public string? UserAgent => null;
+        public Guid? BranchId => null;
     }
 
     private sealed class DesignTimeClock : IDateTime

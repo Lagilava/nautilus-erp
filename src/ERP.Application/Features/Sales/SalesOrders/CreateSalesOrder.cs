@@ -1,4 +1,5 @@
 using ERP.Application.Common.Interfaces;
+using ERP.Application.Common.Security;
 using ERP.Domain.Sales;
 using ERP.Shared.Results;
 using FluentValidation;
@@ -36,7 +37,13 @@ public sealed class CreateSalesOrderCommandValidator : AbstractValidator<CreateS
 public sealed class CreateSalesOrderCommandHandler : IRequestHandler<CreateSalesOrderCommand, Result<Guid>>
 {
     private readonly IApplicationDbContext _db;
-    public CreateSalesOrderCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly IBranchScope _scope;
+
+    public CreateSalesOrderCommandHandler(IApplicationDbContext db, IBranchScope scope)
+    {
+        _db = db;
+        _scope = scope;
+    }
 
     public async Task<Result<Guid>> Handle(CreateSalesOrderCommand request, CancellationToken ct)
     {
@@ -44,6 +51,8 @@ public sealed class CreateSalesOrderCommandHandler : IRequestHandler<CreateSales
             return Result.Failure<Guid>(Error.Validation("Customer does not exist."));
         if (!await _db.Warehouses.AnyAsync(w => w.Id == request.WarehouseId, ct))
             return Result.Failure<Guid>(Error.Validation("Warehouse does not exist."));
+        if (!await _scope.CanAccessWarehouseAsync(request.WarehouseId, ct))
+            return Result.Failure<Guid>(Error.Unauthorized("Warehouse is outside your branch."));
 
         var productIds = request.Lines.Select(l => l.ProductId).Distinct().ToList();
         var knownCount = await _db.Products.CountAsync(p => productIds.Contains(p.Id), ct);

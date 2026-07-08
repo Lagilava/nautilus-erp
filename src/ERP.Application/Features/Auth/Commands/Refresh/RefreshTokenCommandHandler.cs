@@ -1,6 +1,7 @@
 using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Models;
 using ERP.Shared.Results;
+using ERP.Shared.Security;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,8 +32,10 @@ public sealed class RefreshTokenCommandHandler
     {
         var now = _clock.UtcNow;
 
+        // Tokens are stored hashed; look up by hash of the presented value.
+        var presentedHash = TokenHasher.Hash(request.RefreshToken);
         var existing = await _db.RefreshTokens
-            .FirstOrDefaultAsync(t => t.Token == request.RefreshToken, cancellationToken);
+            .FirstOrDefaultAsync(t => t.TokenHash == presentedHash, cancellationToken);
 
         // Unknown, expired, or already-used/revoked token — reject. Presenting a revoked
         // token is a reuse signal; we surface it as unauthorized rather than reissuing.
@@ -48,7 +51,7 @@ public sealed class RefreshTokenCommandHandler
         // mark the old token revoked and link it to its successor for auditability.
         var auth = await _tokenIssuer.IssueAsync(userResult.Value, _currentUser.IpAddress, cancellationToken);
 
-        existing.Revoke(now, auth.RefreshToken);
+        existing.Revoke(now, TokenHasher.Hash(auth.RefreshToken));
         await _db.SaveChangesAsync(cancellationToken);
 
         return Result.Success(auth);

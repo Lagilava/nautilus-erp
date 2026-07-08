@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -109,6 +109,9 @@ export function LoginPage() {
             <button type="submit" className="btn-primary w-full" disabled={isSubmitting}>
               {isSubmitting ? <Spinner className="h-4 w-4 text-white" /> : 'Sign in'}
             </button>
+            <Link to="/forgot-password" className="block text-center text-sm text-ink-muted hover:text-ink">
+              Forgot your password?
+            </Link>
           </form>
         </div>
       </div>

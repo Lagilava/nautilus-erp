@@ -25,6 +25,15 @@ public sealed class CurrentUserService : ICurrentUserService
 
     public string? Email => Context?.User.FindFirstValue(ClaimTypes.Email);
 
+    public Guid? BranchId
+    {
+        get
+        {
+            var value = Context?.User.FindFirstValue(Identity.TokenService.BranchClaim);
+            return Guid.TryParse(value, out var id) ? id : null;
+        }
+    }
+
     public bool IsAuthenticated => Context?.User.Identity?.IsAuthenticated ?? false;
 
     // Available even for anonymous requests (login/register), so we can audit attempts.

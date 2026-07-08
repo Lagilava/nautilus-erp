@@ -31,7 +31,11 @@ public sealed class GetRolesQueryHandler : IRequestHandler<GetRolesQuery, Result
 // ---- Create user ----
 public sealed record CreateUserCommand(
     string Email, string Password, string FirstName, string LastName, IReadOnlyList<string> Roles)
-    : IRequest<Result<Guid>>;
+    : IRequest<Result<Guid>>
+{
+    /// <summary>Optional branch scope. Null = unrestricted (sees every branch).</summary>
+    public Guid? BranchId { get; init; }
+}
 
 public sealed class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
 {
@@ -56,7 +60,8 @@ public sealed class CreateUserCommandHandler : IRequestHandler<CreateUserCommand
         foreach (var role in request.Roles) await _identity.EnsureRoleAsync(role, ct);
 
         var result = await _identity.CreateUserAsync(
-            request.Email, request.Password, request.FirstName, request.LastName, request.Roles, ct);
+            request.Email, request.Password, request.FirstName, request.LastName,
+            request.Roles, request.BranchId, ct);
 
         return result.IsSuccess ? Result.Success(result.Value.Id) : Result.Failure<Guid>(result.Error);
     }
@@ -82,6 +87,18 @@ public sealed class SetUserRolesCommandHandler : IRequestHandler<SetUserRolesCom
 
     public Task<Result> Handle(SetUserRolesCommand request, CancellationToken ct)
         => _identity.SetUserRolesAsync(request.UserId, request.Roles, ct);
+}
+
+// ---- Branch scope (record-level security) ----
+public sealed record SetUserBranchCommand(Guid UserId, Guid? BranchId) : IRequest<Result>;
+
+public sealed class SetUserBranchCommandHandler : IRequestHandler<SetUserBranchCommand, Result>
+{
+    private readonly IIdentityService _identity;
+    public SetUserBranchCommandHandler(IIdentityService identity) => _identity = identity;
+
+    public Task<Result> Handle(SetUserBranchCommand request, CancellationToken ct)
+        => _identity.SetUserBranchAsync(request.UserId, request.BranchId, ct);
 }
 
 // ---- Activate / deactivate ----

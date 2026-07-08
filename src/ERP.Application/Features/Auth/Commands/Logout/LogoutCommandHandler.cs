@@ -1,5 +1,6 @@
 using ERP.Application.Common.Interfaces;
 using ERP.Shared.Results;
+using ERP.Shared.Security;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,8 +20,9 @@ public sealed class LogoutCommandHandler : IRequestHandler<LogoutCommand, Result
     public async Task<Result> Handle(LogoutCommand request, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
+        var presentedHash = TokenHasher.Hash(request.RefreshToken);
         var token = await _db.RefreshTokens
-            .FirstOrDefaultAsync(t => t.Token == request.RefreshToken, cancellationToken);
+            .FirstOrDefaultAsync(t => t.TokenHash == presentedHash, cancellationToken);
 
         // Idempotent: revoking an unknown or already-revoked token still succeeds, so a
         // client can safely log out without leaking whether the token existed.

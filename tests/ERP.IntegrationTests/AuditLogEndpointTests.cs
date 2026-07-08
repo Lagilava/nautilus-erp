@@ -55,14 +55,7 @@ public class AuditLogEndpointTests : IClassFixture<ErpWebApplicationFactory>
     [Fact]
     public async Task Audit_trail_is_forbidden_for_non_admins()
     {
-        var client = _factory.CreateClient();
-        var email = $"staff-{Guid.NewGuid():N}@erp.local";
-        var register = await client.PostAsJsonAsync("/api/auth/register", new
-        {
-            email, password = "Str0ng#Pass1", firstName = "S", lastName = "T"
-        });
-        var auth = await register.Content.ReadFromJsonAsync<AuthResponse>(Json);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+        var client = await _factory.ClientForNewUserAsync("Manager");
 
         var response = await client.GetAsync("/api/audit-logs");
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);

@@ -1,4 +1,5 @@
 using ERP.Application.Common.Interfaces;
+using ERP.Application.Common.Security;
 using ERP.Domain.Sales;
 using ERP.Domain.Purchasing;
 using ERP.Shared.Results;
@@ -26,11 +27,13 @@ public sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery
 {
     private readonly IApplicationDbContext _db;
     private readonly IDateTime _clock;
+    private readonly IBranchScope _scope;
 
-    public GetDashboardQueryHandler(IApplicationDbContext db, IDateTime clock)
+    public GetDashboardQueryHandler(IApplicationDbContext db, IDateTime clock, IBranchScope scope)
     {
         _db = db;
         _clock = clock;
+        _scope = scope;
     }
 
     public async Task<Result<DashboardDto>> Handle(GetDashboardQuery request, CancellationToken ct)
@@ -42,13 +45,29 @@ public sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery
         var supplierCount = await _db.Suppliers.CountAsync(ct);
         var productCount = await _db.Products.CountAsync(ct);
 
-        // Inventory value and low-stock translate to SQL directly.
-        var inventoryValue = await _db.StockLayers.SumAsync(l => (decimal?)(l.RemainingQuantity * l.UnitCost), ct) ?? 0m;
-        var lowStockCount = await _db.InventoryItems.CountAsync(i => i.QuantityOnHand <= i.ReorderLevel, ct);
+        // Record-level security: stock and orders are reported only for the caller's branch.
+        var allowed = await _scope.AllowedWarehouseIdsAsync(ct);
 
-        var openSalesOrders = await _db.SalesOrders.CountAsync(
+        var items = _db.InventoryItems.AsNoTracking();
+        var layers = _db.StockLayers.AsNoTracking();
+        var salesOrders = _db.SalesOrders.AsNoTracking();
+        var purchaseOrders = _db.PurchaseOrders.AsNoTracking();
+
+        if (allowed is not null)
+        {
+            var scopedItemIds = items.Where(i => allowed.Contains(i.WarehouseId)).Select(i => i.Id);
+            items = items.Where(i => allowed.Contains(i.WarehouseId));
+            layers = layers.Where(l => scopedItemIds.Contains(l.InventoryItemId));
+            salesOrders = salesOrders.Where(o => allowed.Contains(o.WarehouseId));
+            purchaseOrders = purchaseOrders.Where(o => allowed.Contains(o.WarehouseId));
+        }
+
+        var inventoryValue = await layers.SumAsync(l => (decimal?)(l.RemainingQuantity * l.UnitCost), ct) ?? 0m;
+        var lowStockCount = await items.CountAsync(i => i.QuantityOnHand <= i.ReorderLevel, ct);
+
+        var openSalesOrders = await salesOrders.CountAsync(
             o => o.Status == SalesOrderStatus.Confirmed, ct);
-        var openPurchaseOrders = await _db.PurchaseOrders.CountAsync(
+        var openPurchaseOrders = await purchaseOrders.CountAsync(
             o => o.Status == PurchaseOrderStatus.Confirmed || o.Status == PurchaseOrderStatus.PartiallyReceived, ct);
 
         // Invoice/supplier-invoice totals derive from lines, so load the relevant open

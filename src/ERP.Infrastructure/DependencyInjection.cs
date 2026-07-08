@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddSingleton<IDateTime, DateTimeService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddSingleton<IAppUrls, AppUrls>();
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.AddScoped<ITokenService, TokenService>();

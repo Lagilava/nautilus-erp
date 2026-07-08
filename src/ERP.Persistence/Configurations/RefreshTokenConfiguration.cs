@@ -11,11 +11,11 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
         builder.ToTable("RefreshTokens");
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Token).IsRequired().HasMaxLength(512);
-        builder.HasIndex(x => x.Token).IsUnique();
+        builder.Property(x => x.TokenHash).IsRequired().HasMaxLength(128);
+        builder.HasIndex(x => x.TokenHash).IsUnique();
         builder.HasIndex(x => x.UserId);
 
-        builder.Property(x => x.ReplacedByToken).HasMaxLength(512);
+        builder.Property(x => x.ReplacedByTokenHash).HasMaxLength(128);
         builder.Property(x => x.CreatedByIp).HasMaxLength(64);
         builder.Property(x => x.RowVersion).IsRowVersion();
 

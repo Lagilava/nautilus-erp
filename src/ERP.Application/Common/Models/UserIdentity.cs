@@ -9,4 +9,5 @@ public sealed record UserIdentity(
     string Email,
     string FirstName,
     string LastName,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    Guid? BranchId = null);

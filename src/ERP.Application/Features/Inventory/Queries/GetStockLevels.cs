@@ -1,5 +1,6 @@
 using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Models;
+using ERP.Application.Common.Security;
 using ERP.Shared.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -28,11 +29,21 @@ public sealed class GetStockLevelsQueryHandler
     : IRequestHandler<GetStockLevelsQuery, Result<PagedResult<StockLevelDto>>>
 {
     private readonly IApplicationDbContext _db;
-    public GetStockLevelsQueryHandler(IApplicationDbContext db) => _db = db;
+    private readonly IBranchScope _scope;
+
+    public GetStockLevelsQueryHandler(IApplicationDbContext db, IBranchScope scope)
+    {
+        _db = db;
+        _scope = scope;
+    }
 
     public async Task<Result<PagedResult<StockLevelDto>>> Handle(GetStockLevelsQuery request, CancellationToken ct)
     {
         var query = _db.InventoryItems.AsNoTracking();
+
+        // Record-level security: a branch-scoped user only sees their branch's warehouses.
+        if (await _scope.AllowedWarehouseIdsAsync(ct) is { } allowed)
+            query = query.Where(i => allowed.Contains(i.WarehouseId));
 
         if (request.WarehouseId is { } wh)
             query = query.Where(i => i.WarehouseId == wh);
