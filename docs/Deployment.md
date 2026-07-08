@@ -2,8 +2,18 @@
 
 ## Quick start (Windows, no Docker)
 Double-click `run-dev.bat` at the repo root — it opens the API and client in their own
-terminals and launches the browser. Or run the two commands manually (see below). Sign in
-with `admin@erp.local` / `Admin#12345`.
+terminals and launches the browser. Or run the two commands manually (see below).
+
+Demo sign-ins (Development only — the demo seeder creates the latter two):
+
+| Account | Password | Role |
+|---|---|---|
+| `admin@erp.local` | `Admin#12345` | Administrator |
+| `manager@erp.local` | `Demo#12345` | Manager |
+| `staff@erp.local` | `Demo#12345` | Staff |
+
+Use two different accounts when walking the purchasing flow — segregation of duties will
+reject an approval by the same person who raised the order.
 
 ## Prerequisites
 - .NET SDK 9.0 (`dotnet --version` → 9.0.x)

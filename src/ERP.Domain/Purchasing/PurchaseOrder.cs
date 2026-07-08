@@ -19,6 +19,9 @@ public class PurchaseOrder : AuditableEntity
     public DateOnly OrderDate { get; set; }
     public PurchaseOrderStatus Status { get; private set; } = PurchaseOrderStatus.Draft;
 
+    /// <summary>User who approved (confirmed) this order. Segregation of duties compares against it.</summary>
+    public string? ConfirmedBy { get; private set; }
+
     public string? Notes { get; set; }
 
     public ICollection<PurchaseOrderLine> Lines { get; set; } = new List<PurchaseOrderLine>();
@@ -40,11 +43,12 @@ public class PurchaseOrder : AuditableEntity
         });
     }
 
-    public void Confirm()
+    public void Confirm(string? approvedBy = null)
     {
         EnsureDraft("confirm");
         if (Lines.Count == 0) throw new DomainException("Cannot confirm an order with no lines.");
         Status = PurchaseOrderStatus.Confirmed;
+        ConfirmedBy = approvedBy;
     }
 
     public void Cancel()

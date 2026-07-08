@@ -34,6 +34,7 @@ public sealed class PurchaseOrderConfiguration : AuditableEntityConfiguration<Pu
         builder.HasIndex(x => x.Number).IsUnique();
         builder.Property(x => x.Status).HasConversion<int>();
         builder.Property(x => x.Notes).HasMaxLength(1000);
+        builder.Property(x => x.ConfirmedBy).HasMaxLength(64);
         builder.HasIndex(x => x.SupplierId);
         builder.Ignore(x => x.SubTotal);
 
@@ -103,6 +104,7 @@ public sealed class SupplierInvoiceConfiguration : AuditableEntityConfiguration<
         builder.HasIndex(x => x.Number).IsUnique();
         builder.Property(x => x.SupplierReference).HasMaxLength(64);
         builder.Property(x => x.Status).HasConversion<int>();
+        builder.Property(x => x.ApprovedBy).HasMaxLength(64);
         builder.Property(x => x.AmountPaid).HasPrecision(18, 2);
         builder.HasIndex(x => x.SupplierId);
         builder.Ignore(x => x.SubTotal);

@@ -16,13 +16,29 @@ public sealed record CancelPurchaseOrderCommand(Guid Id) : IRequest<Result>;
 public sealed class ConfirmPurchaseOrderCommandHandler : IRequestHandler<ConfirmPurchaseOrderCommand, Result>
 {
     private readonly IApplicationDbContext _db;
-    public ConfirmPurchaseOrderCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly ISegregationOfDuties _sod;
+    private readonly ICurrentUserService _currentUser;
+
+    public ConfirmPurchaseOrderCommandHandler(
+        IApplicationDbContext db, ISegregationOfDuties sod, ICurrentUserService currentUser)
+    {
+        _db = db;
+        _sod = sod;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result> Handle(ConfirmPurchaseOrderCommand request, CancellationToken ct)
     {
         var order = await _db.PurchaseOrders.Include(o => o.Lines).FirstOrDefaultAsync(o => o.Id == request.Id, ct);
         if (order is null) return Result.Failure(Error.NotFound("Purchase order not found."));
-        try { order.Confirm(); }
+
+        // Maker-checker: the person who raised the order may not approve it.
+        var sod = _sod.Ensure(SoDRule.PurchaseOrderApproval,
+            "You cannot approve a purchase order you raised. It must be approved by someone else.",
+            order.CreatedBy);
+        if (sod.IsFailure) return sod;
+
+        try { order.Confirm(_currentUser.UserId?.ToString()); }
         catch (DomainException ex) { return Result.Failure(Error.Conflict(ex.Message)); }
         await _db.SaveChangesAsync(ct);
         return Result.Success();

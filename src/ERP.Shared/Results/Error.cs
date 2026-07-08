@@ -14,6 +14,9 @@ public sealed record Error(string Code, string Message)
     /// <summary>Authentication/authorization failure.</summary>
     public static Error Unauthorized(string message) => new("unauthorized", message);
 
+    /// <summary>Authenticated, but this action is not permitted (e.g. segregation of duties).</summary>
+    public static Error Forbidden(string message) => new("forbidden", message);
+
     /// <summary>A conflicting state (e.g. duplicate email).</summary>
     public static Error Conflict(string message) => new("conflict", message);
 

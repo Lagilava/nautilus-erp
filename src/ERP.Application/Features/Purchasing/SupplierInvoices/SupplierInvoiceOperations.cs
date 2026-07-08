@@ -1,5 +1,6 @@
 using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Models;
+using ERP.Application.Common.Security;
 using ERP.Application.Features.Sales;
 using ERP.Domain.Common;
 using ERP.Domain.Purchasing;
@@ -18,13 +19,37 @@ public sealed record CancelSupplierInvoiceCommand(Guid Id) : IRequest<Result>;
 public sealed class ApproveSupplierInvoiceCommandHandler : IRequestHandler<ApproveSupplierInvoiceCommand, Result>
 {
     private readonly IApplicationDbContext _db;
-    public ApproveSupplierInvoiceCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly ISegregationOfDuties _sod;
+    private readonly ICurrentUserService _currentUser;
+
+    public ApproveSupplierInvoiceCommandHandler(
+        IApplicationDbContext db, ISegregationOfDuties sod, ICurrentUserService currentUser)
+    {
+        _db = db;
+        _sod = sod;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result> Handle(ApproveSupplierInvoiceCommand request, CancellationToken ct)
     {
         var inv = await _db.SupplierInvoices.Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == request.Id, ct);
         if (inv is null) return Result.Failure(Error.NotFound("Supplier invoice not found."));
-        try { inv.Approve(); }
+
+        // Whoever entered the bill, or confirmed the goods it bills for, may not approve it —
+        // otherwise one person completes the three-way match alone.
+        var receivers = inv.PurchaseOrderId is { } poId
+            ? await _db.GoodsReceipts.AsNoTracking()
+                .Where(g => g.PurchaseOrderId == poId)
+                .Select(g => g.CreatedBy)
+                .ToArrayAsync(ct)
+            : [];
+
+        var sod = _sod.Ensure(SoDRule.SupplierInvoiceApproval,
+            "You cannot approve a supplier invoice you entered, or one for goods you received.",
+            [inv.CreatedBy, .. receivers]);
+        if (sod.IsFailure) return sod;
+
+        try { inv.Approve(_currentUser.UserId?.ToString()); }
         catch (DomainException ex) { return Result.Failure(Error.Conflict(ex.Message)); }
         await _db.SaveChangesAsync(ct);
         return Result.Success();
@@ -68,7 +93,13 @@ public sealed class RecordSupplierPaymentCommandHandler
     : IRequestHandler<RecordSupplierPaymentCommand, Result<Guid>>
 {
     private readonly IApplicationDbContext _db;
-    public RecordSupplierPaymentCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly ISegregationOfDuties _sod;
+
+    public RecordSupplierPaymentCommandHandler(IApplicationDbContext db, ISegregationOfDuties sod)
+    {
+        _db = db;
+        _sod = sod;
+    }
 
     public async Task<Result<Guid>> Handle(RecordSupplierPaymentCommand request, CancellationToken ct)
     {
@@ -76,6 +107,12 @@ public sealed class RecordSupplierPaymentCommandHandler
             .FirstOrDefaultAsync(i => i.Id == request.SupplierInvoiceId, ct);
         if (invoice is null)
             return Result.Failure<Guid>(Error.NotFound("Supplier invoice not found."));
+
+        // Approving a payable and releasing the money are different duties.
+        var sod = _sod.Ensure(SoDRule.SupplierPayment,
+            "You cannot pay a supplier invoice you approved.",
+            invoice.ApprovedBy);
+        if (sod.IsFailure) return Result.Failure<Guid>(sod.Error);
 
         try { invoice.ApplyPayment(request.Amount); }
         catch (DomainException ex) { return Result.Failure<Guid>(Error.Conflict(ex.Message)); }

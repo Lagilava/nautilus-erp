@@ -21,6 +21,7 @@ public static class DependencyInjection
 
         services.AddScoped<IAuthTokenIssuer, AuthTokenIssuer>();
         services.AddScoped<Common.Security.IBranchScope, Common.Security.BranchScope>();
+        services.AddScoped<Common.Security.ISegregationOfDuties, Common.Security.SegregationOfDuties>();
 
         return services;
     }

@@ -24,6 +24,10 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddSingleton<IAppUrls, AppUrls>();
 
+        // Segregation-of-duties policy ("Sod" section). Enforced unless explicitly relaxed.
+        services.AddSingleton(configuration.GetSection("Sod").Get<ERP.Application.Common.Security.SoDOptions>()
+                              ?? new ERP.Application.Common.Security.SoDOptions());
+
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.AddScoped<ITokenService, TokenService>();
 

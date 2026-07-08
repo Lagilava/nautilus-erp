@@ -51,6 +51,9 @@ public class SupplierInvoice : AuditableEntity
     public SupplierInvoiceStatus Status { get; private set; } = SupplierInvoiceStatus.Draft;
     public decimal AmountPaid { get; private set; }
 
+    /// <summary>User who approved this bill for payment. Segregation of duties compares against it.</summary>
+    public string? ApprovedBy { get; private set; }
+
     public ICollection<SupplierInvoiceLine> Lines { get; set; } = new List<SupplierInvoiceLine>();
 
     public decimal SubTotal => Lines.Sum(l => l.LineSubTotal);
@@ -77,13 +80,14 @@ public class SupplierInvoice : AuditableEntity
         });
     }
 
-    public void Approve()
+    public void Approve(string? approvedBy = null)
     {
         if (Status != SupplierInvoiceStatus.Draft)
             throw new DomainException($"Only a draft supplier invoice can be approved (current: {Status}).");
         if (Lines.Count == 0)
             throw new DomainException("Cannot approve a supplier invoice with no lines.");
         Status = SupplierInvoiceStatus.Approved;
+        ApprovedBy = approvedBy;
     }
 
     public void ApplyPayment(decimal amount)

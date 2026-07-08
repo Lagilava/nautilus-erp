@@ -1,4 +1,5 @@
 using ERP.Application.Common.Interfaces;
+using ERP.Application.Common.Security;
 using ERP.Application.Features.Inventory;
 using ERP.Application.Features.Sales;
 using ERP.Domain.Common;
@@ -43,11 +44,13 @@ public sealed class PostGoodsReceiptCommandHandler : IRequestHandler<PostGoodsRe
 {
     private readonly IApplicationDbContext _db;
     private readonly IDateTime _clock;
+    private readonly ISegregationOfDuties _sod;
 
-    public PostGoodsReceiptCommandHandler(IApplicationDbContext db, IDateTime clock)
+    public PostGoodsReceiptCommandHandler(IApplicationDbContext db, IDateTime clock, ISegregationOfDuties sod)
     {
         _db = db;
         _clock = clock;
+        _sod = sod;
     }
 
     public async Task<Result<Guid>> Handle(PostGoodsReceiptCommand request, CancellationToken ct)
@@ -56,6 +59,13 @@ public sealed class PostGoodsReceiptCommandHandler : IRequestHandler<PostGoodsRe
             .FirstOrDefaultAsync(o => o.Id == request.PurchaseOrderId, ct);
         if (order is null)
             return Result.Failure<Guid>(Error.NotFound("Purchase order not found."));
+
+        // Purchasing must be separate from receiving: whoever raised or approved the order
+        // must not be the one confirming the goods arrived.
+        var sod = _sod.Ensure(SoDRule.GoodsReceipt,
+            "You cannot receive goods against a purchase order you raised or approved.",
+            order.CreatedBy, order.ConfirmedBy);
+        if (sod.IsFailure) return Result.Failure<Guid>(sod.Error);
 
         var sequence = await _db.GoodsReceipts.IgnoreQueryFilters().CountAsync(ct) + 1;
         var receipt = new GoodsReceipt

@@ -1,4 +1,5 @@
 using ERP.Application.Common.Interfaces;
+using ERP.Application.Common.Security;
 using ERP.Domain.Common;
 using ERP.Shared.Results;
 using MediatR;
@@ -15,15 +16,17 @@ public sealed class IssueInvoiceCommandHandler : IRequestHandler<IssueInvoiceCom
     private readonly IFiscalizationService _fiscalization;
     private readonly IRealtimeNotifier _notifications;
     private readonly IEmailQueue _email;
+    private readonly ICurrentUserService _currentUser;
 
     public IssueInvoiceCommandHandler(
         IApplicationDbContext db, IFiscalizationService fiscalization,
-        IRealtimeNotifier notifications, IEmailQueue email)
+        IRealtimeNotifier notifications, IEmailQueue email, ICurrentUserService currentUser)
     {
         _db = db;
         _fiscalization = fiscalization;
         _notifications = notifications;
         _email = email;
+        _currentUser = currentUser;
     }
 
     public async Task<Result> Handle(IssueInvoiceCommand request, CancellationToken ct)
@@ -32,7 +35,7 @@ public sealed class IssueInvoiceCommandHandler : IRequestHandler<IssueInvoiceCom
             .FirstOrDefaultAsync(i => i.Id == request.Id, ct);
         if (invoice is null) return Result.Failure(Error.NotFound("Invoice not found."));
 
-        try { invoice.Issue(); }
+        try { invoice.Issue(_currentUser.UserId?.ToString()); }
         catch (DomainException ex) { return Result.Failure(Error.Conflict(ex.Message)); }
 
         // Submit to FRCS/VMS. The stub records NotSubmitted; a verified adapter would return
@@ -64,12 +67,24 @@ public sealed record VoidInvoiceCommand(Guid Id) : IRequest<Result>;
 public sealed class VoidInvoiceCommandHandler : IRequestHandler<VoidInvoiceCommand, Result>
 {
     private readonly IApplicationDbContext _db;
-    public VoidInvoiceCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly ISegregationOfDuties _sod;
+
+    public VoidInvoiceCommandHandler(IApplicationDbContext db, ISegregationOfDuties sod)
+    {
+        _db = db;
+        _sod = sod;
+    }
 
     public async Task<Result> Handle(VoidInvoiceCommand request, CancellationToken ct)
     {
         var invoice = await _db.Invoices.FirstOrDefaultAsync(i => i.Id == request.Id, ct);
         if (invoice is null) return Result.Failure(Error.NotFound("Invoice not found."));
+
+        // Voiding a sale you issued is how revenue gets hidden after the cash is taken.
+        var sod = _sod.Ensure(SoDRule.InvoiceVoid,
+            "You cannot void an invoice you issued. It must be voided by someone else.",
+            invoice.IssuedBy);
+        if (sod.IsFailure) return sod;
 
         try { invoice.Void(); }
         catch (DomainException ex) { return Result.Failure(Error.Conflict(ex.Message)); }

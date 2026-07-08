@@ -24,6 +24,9 @@ public class Invoice : AuditableEntity
 
     public decimal AmountPaid { get; private set; }
 
+    /// <summary>User who issued this invoice. Segregation of duties prevents them voiding it.</summary>
+    public string? IssuedBy { get; private set; }
+
     // Fiscalization (FRCS/VMS) — set by the fiscalization service on issue.
     public FiscalStatus FiscalStatus { get; private set; } = FiscalStatus.NotSubmitted;
     public string? FiscalReference { get; private set; }
@@ -57,13 +60,14 @@ public class Invoice : AuditableEntity
     }
 
     /// <summary>Commits the invoice as a tax document. No further line edits are allowed.</summary>
-    public void Issue()
+    public void Issue(string? issuedBy = null)
     {
         if (Status != InvoiceStatus.Draft)
             throw new DomainException($"Only a draft invoice can be issued (current: {Status}).");
         if (Lines.Count == 0)
             throw new DomainException("Cannot issue an invoice with no lines.");
         Status = InvoiceStatus.Issued;
+        IssuedBy = issuedBy;
     }
 
     /// <summary>Records the outcome of an FRCS/VMS submission attempt.</summary>

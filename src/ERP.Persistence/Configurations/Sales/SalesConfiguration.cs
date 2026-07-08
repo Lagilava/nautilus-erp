@@ -72,6 +72,7 @@ public sealed class InvoiceConfiguration : AuditableEntityConfiguration<Invoice>
         builder.Property(x => x.Status).HasConversion<int>();
         builder.Property(x => x.FiscalStatus).HasConversion<int>();
         builder.Property(x => x.FiscalReference).HasMaxLength(128);
+        builder.Property(x => x.IssuedBy).HasMaxLength(64);
         builder.Property(x => x.AmountPaid).HasPrecision(18, 2);
         builder.Property(x => x.Notes).HasMaxLength(1000);
 

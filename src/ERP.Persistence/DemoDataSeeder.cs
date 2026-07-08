@@ -4,6 +4,9 @@ using ERP.Domain.Organization;
 using ERP.Domain.Purchasing;
 using ERP.Domain.Sales;
 using ERP.Domain.Taxation;
+using ERP.Persistence.Identity;
+using ERP.Shared.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -57,6 +60,10 @@ public static class DemoDataSeeder
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+        // Runs before the early-exit below: without a second and third person the
+        // segregation-of-duties rules cannot be demonstrated at all.
+        await SeedDemoUsersAsync(scope.ServiceProvider, logger);
+
         // Schema creation/migration is the initialiser's job — a seeder must not do it.
         if (await db.Customers.AnyAsync(c => c.Code == "CUST-001"))
         {
@@ -84,6 +91,50 @@ public static class DemoDataSeeder
         await SeedSupplierInvoiceAsync(db);
 
         logger?.LogInformation("Demo data seeding complete.");
+    }
+
+    /// <summary>
+    /// A manager and a storeman alongside the bootstrap administrator. Segregation of duties is
+    /// only meaningful with more than one pair of hands: the manager raises a purchase order,
+    /// the administrator approves it, the storeman receives it. All three are left unscoped to a
+    /// branch because the demo company has exactly one.
+    /// </summary>
+    private static async Task SeedDemoUsersAsync(IServiceProvider services, ILogger? logger)
+    {
+        var users = services.GetRequiredService<UserManager<ApplicationUser>>();
+
+        (string Email, string First, string Last, string Role)[] demo =
+        [
+            ("manager@erp.local", "Mere", "Vakalala", Roles.Manager),
+            ("staff@erp.local", "Josua", "Tuisawau", Roles.Staff),
+        ];
+
+        foreach (var (email, first, last, role) in demo)
+        {
+            if (await users.FindByEmailAsync(email) is not null) continue;
+
+            var user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true,
+                FirstName = first,
+                LastName = last
+            };
+
+            // Same password policy as the bootstrap admin; these accounts only exist in demo data.
+            var created = await users.CreateAsync(user, "Demo#12345");
+            if (created.Succeeded)
+            {
+                await users.AddToRoleAsync(user, role);
+                logger?.LogInformation("Seeded demo {Role} {Email}", role, email);
+            }
+            else
+            {
+                logger?.LogWarning("Failed to seed demo user {Email}: {Errors}",
+                    email, string.Join(", ", created.Errors.Select(e => e.Description)));
+            }
+        }
     }
 
     private static async Task SeedCompanyProfileAsync(ApplicationDbContext db)

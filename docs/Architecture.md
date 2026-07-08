@@ -24,6 +24,35 @@ ERP.API           (thin controllers, HTTP ↔ MediatR; refs Application, Infra, 
 - **Entities are persistence-ignorant** — no EF attributes; `IEntityTypeConfiguration<T>`
   in Persistence (added in the persistence milestone).
 
+## Access control
+Three layers, applied in order:
+
+1. **Role-based** — `Administrator`, `Manager`, `Staff`, via `[Authorize(Roles = …)]`.
+   Customers never sign in; the ERP is a staff system.
+2. **Branch scoping** (record-level) — a `branch` JWT claim narrows every warehouse-bound
+   query and write through `IBranchScope`. A user with no branch is unrestricted.
+3. **Segregation of duties** (`Common/Security/SegregationOfDuties.cs`) — maker-checker on the
+   procure-to-pay chain, so no one person can raise an order, approve it, receive the goods,
+   approve the bill and pay it. The rules:
+
+   | Rule | The actor may not be… |
+   |---|---|
+   | `PurchaseOrderApproval` | the person who raised the order |
+   | `GoodsReceipt` | the raiser or the approver of the order |
+   | `SupplierInvoiceApproval` | the person who entered the bill, or who received the goods |
+   | `SupplierPayment` | the person who approved the bill |
+   | `InvoiceVoid` | the person who issued the invoice |
+
+   Enforced by default and returning **403** with an explanatory message. Every block is logged.
+   A two-person shop can relax individual rules — or all of them — through configuration:
+
+   ```jsonc
+   "Sod": { "Enabled": true, "DisabledRules": ["SupplierPayment"] }
+   ```
+
+   Documents created without an authenticated user (the demo seeder) have no recorded actor and
+   therefore never trip a rule.
+
 ## Fiji localization (design intent)
 Tax/fiscalization are first-class Domain concerns, not late add-ons. See
 [erp-claude-code-prompt.md](../erp-claude-code-prompt.md) → *Fiji Localization Requirements*.

@@ -29,6 +29,7 @@ public abstract class ApiControllerBase : ControllerBase
         {
             "validation" => StatusCodes.Status400BadRequest,
             "unauthorized" => StatusCodes.Status401Unauthorized,
+            "forbidden" => StatusCodes.Status403Forbidden,
             "locked_out" => StatusCodes.Status423Locked,
             "conflict" => StatusCodes.Status409Conflict,
             "not_found" => StatusCodes.Status404NotFound,

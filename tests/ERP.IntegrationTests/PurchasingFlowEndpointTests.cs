@@ -9,6 +9,9 @@ namespace ERP.IntegrationTests;
 /// The procure-to-pay flow: create supplier + catalog, raise and confirm a purchase order,
 /// receive goods (which increases FIFO stock and advances the PO), then bill and pay the
 /// supplier invoice through to Paid.
+///
+/// Each step is performed by a different person, because segregation of duties forbids one
+/// actor from walking the chain alone (see <see cref="SegregationOfDutiesEndpointTests"/>).
 /// </summary>
 public class PurchasingFlowEndpointTests : IClassFixture<ErpWebApplicationFactory>
 {
@@ -43,6 +46,11 @@ public class PurchasingFlowEndpointTests : IClassFixture<ErpWebApplicationFactor
     public async Task Procure_to_pay_happy_path()
     {
         var client = await AdminClientAsync();
+        var buyer = await _factory.ClientForNewUserAsync("Manager");
+        var approver = await _factory.ClientForNewUserAsync("Manager");
+        var storeman = await _factory.ClientForNewUserAsync("Manager");
+        var payables = await _factory.ClientForNewUserAsync("Manager");
+        var treasury = await _factory.ClientForNewUserAsync("Manager");
         var s = Guid.NewGuid().ToString("N")[..8];
 
         var uom = await IdAsync(await client.PostAsJsonAsync("/api/units-of-measure", new { code = $"EA{s}", name = "Each" }));
@@ -63,19 +71,19 @@ public class PurchasingFlowEndpointTests : IClassFixture<ErpWebApplicationFactor
             addressLine1 = (string?)null, city = (string?)null, country = "Fiji", taxIdentificationNumber = (string?)null
         }));
 
-        // PO for 20 @ 4.00, confirm.
-        var po = await IdAsync(await client.PostAsJsonAsync("/api/purchase-orders", new
+        // PO for 20 @ 4.00 raised by the buyer, confirmed by a second manager.
+        var po = await IdAsync(await buyer.PostAsJsonAsync("/api/purchase-orders", new
         {
             supplierId = supplier, warehouseId = warehouse, orderDate = "2026-07-01",
             lines = new[] { new { productId = product, quantity = 20.0, unitCost = 4.0 } }, notes = (string?)null
         }));
-        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsync($"/api/purchase-orders/{po}/confirm", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await approver.PostAsync($"/api/purchase-orders/{po}/confirm", null)).StatusCode);
 
         var poDto = await client.GetFromJsonAsync<JsonElement>($"/api/purchase-orders/{po}", Json);
         var poLineId = poDto.GetProperty("lines")[0].GetProperty("id").GetGuid();
 
         // Receive 8 → PartiallyReceived, stock 8.
-        await IdAsync(await client.PostAsJsonAsync($"/api/purchase-orders/{po}/receipts", new
+        await IdAsync(await storeman.PostAsJsonAsync($"/api/purchase-orders/{po}/receipts", new
         {
             purchaseOrderId = po, receivedDate = "2026-07-03",
             lines = new[] { new { purchaseOrderLineId = poLineId, quantity = 8.0 } }, notes = (string?)null
@@ -84,7 +92,7 @@ public class PurchasingFlowEndpointTests : IClassFixture<ErpWebApplicationFactor
         Assert.Equal("PartiallyReceived", afterPartial.GetProperty("status").GetString());
 
         // Receive remaining 12 → Received, stock 20.
-        await IdAsync(await client.PostAsJsonAsync($"/api/purchase-orders/{po}/receipts", new
+        await IdAsync(await storeman.PostAsJsonAsync($"/api/purchase-orders/{po}/receipts", new
         {
             purchaseOrderId = po, receivedDate = "2026-07-05",
             lines = new[] { new { purchaseOrderLineId = poLineId, quantity = 12.0 } }, notes = (string?)null
@@ -97,16 +105,16 @@ public class PurchasingFlowEndpointTests : IClassFixture<ErpWebApplicationFactor
         Assert.Equal(80m, levels.GetProperty("items")[0].GetProperty("stockValue").GetDecimal()); // 20 × 4.00
 
         // Supplier invoice from PO: 20 × 4 = 80 net, 15% = 12, total 92.
-        var sinv = await IdAsync(await client.PostAsJsonAsync("/api/supplier-invoices/from-order",
+        var sinv = await IdAsync(await payables.PostAsJsonAsync("/api/supplier-invoices/from-order",
             new { purchaseOrderId = po, issueDate = "2026-07-06", dueDate = "2026-07-31", supplierReference = "INV-EXT-1" }));
-        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsync($"/api/supplier-invoices/{sinv}/approve", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await approver.PostAsync($"/api/supplier-invoices/{sinv}/approve", null)).StatusCode);
 
         var approved = await client.GetFromJsonAsync<JsonElement>($"/api/supplier-invoices/{sinv}", Json);
         Assert.Equal(92m, approved.GetProperty("total").GetDecimal());
         Assert.Equal("Approved", approved.GetProperty("status").GetString());
 
-        // Pay in full → Paid.
-        await IdAsync(await client.PostAsJsonAsync($"/api/supplier-invoices/{sinv}/payments",
+        // Pay in full → Paid. Treasury releases the money, never the approver.
+        await IdAsync(await treasury.PostAsJsonAsync($"/api/supplier-invoices/{sinv}/payments",
             new { supplierInvoiceId = sinv, amount = 92.0, paymentDate = "2026-07-10", method = 3, reference = "TT-1" }));
         var paid = await client.GetFromJsonAsync<JsonElement>($"/api/supplier-invoices/{sinv}", Json);
         Assert.Equal("Paid", paid.GetProperty("status").GetString());
@@ -117,6 +125,8 @@ public class PurchasingFlowEndpointTests : IClassFixture<ErpWebApplicationFactor
     public async Task Over_receiving_a_line_is_conflict()
     {
         var client = await AdminClientAsync();
+        var buyer = await _factory.ClientForNewUserAsync("Manager");
+        var storeman = await _factory.ClientForNewUserAsync("Manager");
         var s = Guid.NewGuid().ToString("N")[..8];
         var uom = await IdAsync(await client.PostAsJsonAsync("/api/units-of-measure", new { code = $"EA{s}", name = "Each" }));
         var cat = await IdAsync(await client.PostAsJsonAsync("/api/categories",
@@ -135,16 +145,16 @@ public class PurchasingFlowEndpointTests : IClassFixture<ErpWebApplicationFactor
             code = $"SUP{s}", name = "Globex", email = (string?)null, phone = (string?)null,
             addressLine1 = (string?)null, city = (string?)null, country = (string?)null, taxIdentificationNumber = (string?)null
         }));
-        var po = await IdAsync(await client.PostAsJsonAsync("/api/purchase-orders", new
+        var po = await IdAsync(await buyer.PostAsJsonAsync("/api/purchase-orders", new
         {
             supplierId = supplier, warehouseId = warehouse, orderDate = "2026-07-01",
             lines = new[] { new { productId = product, quantity = 5.0, unitCost = 1.0 } }, notes = (string?)null
         }));
-        await client.PostAsync($"/api/purchase-orders/{po}/confirm", null);
+        (await client.PostAsync($"/api/purchase-orders/{po}/confirm", null)).EnsureSuccessStatusCode();
         var poDto = await client.GetFromJsonAsync<JsonElement>($"/api/purchase-orders/{po}", Json);
         var lineId = poDto.GetProperty("lines")[0].GetProperty("id").GetGuid();
 
-        var over = await client.PostAsJsonAsync($"/api/purchase-orders/{po}/receipts", new
+        var over = await storeman.PostAsJsonAsync($"/api/purchase-orders/{po}/receipts", new
         {
             purchaseOrderId = po, receivedDate = "2026-07-03",
             lines = new[] { new { purchaseOrderLineId = lineId, quantity = 6.0 } }, notes = (string?)null
