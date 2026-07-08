@@ -43,12 +43,15 @@ public sealed class GetStockLevelsQueryHandler
 
         // Join to product/warehouse for display names — translatable and avoids correlated
         // scalar subqueries. Stock value is the sum over remaining FIFO layers.
+        //
+        // Order by SKU, not QuantityOnHand: SQLite cannot ORDER BY a decimal, and paging needs a
+        // stable server-side sort. Callers wanting "what needs replenishing" use lowStockOnly.
         var items = await query
-            .OrderBy(i => i.QuantityOnHand)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
             .Join(_db.Products, i => i.ProductId, p => p.Id, (i, p) => new { i, p })
             .Join(_db.Warehouses, x => x.i.WarehouseId, w => w.Id, (x, w) => new { x.i, x.p, w })
+            .OrderBy(x => x.p.Sku)
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
             .Select(x => new StockLevelDto(
                 x.i.ProductId,
                 x.p.Sku,

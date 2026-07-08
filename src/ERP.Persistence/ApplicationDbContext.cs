@@ -12,6 +12,7 @@ using ERP.Domain.Taxation;
 using ERP.Persistence.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace ERP.Persistence;
 
@@ -97,6 +98,28 @@ public sealed class ApplicationDbContext
             var key = entityType.FindPrimaryKey();
             if (key is { Properties.Count: 1 } && key.Properties[0].ClrType == typeof(Guid))
                 key.Properties[0].ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
+        }
+
+        // SQLite refuses to ORDER BY a DateTimeOffset (its TEXT form doesn't sort correctly across
+        // offsets), which would break the stock ledger and audit trail. Every timestamp we store is
+        // UTC, so persist them as UTC ticks under SQLite: sortable, lossless, and query code stays
+        // identical across providers. SQL Server keeps native datetimeoffset.
+        if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+        {
+            var toTicks = new ValueConverter<DateTimeOffset, long>(
+                d => d.UtcTicks,
+                v => new DateTimeOffset(v, TimeSpan.Zero));
+            var toTicksNullable = new ValueConverter<DateTimeOffset?, long?>(
+                d => d.HasValue ? d.Value.UtcTicks : null,
+                v => v.HasValue ? new DateTimeOffset(v.Value, TimeSpan.Zero) : null);
+
+            foreach (var property in builder.Model.GetEntityTypes().SelectMany(e => e.GetProperties()))
+            {
+                if (property.ClrType == typeof(DateTimeOffset))
+                    property.SetValueConverter(toTicks);
+                else if (property.ClrType == typeof(DateTimeOffset?))
+                    property.SetValueConverter(toTicksNullable);
+            }
         }
 
         // Only SQL Server auto-generates rowversion values. Under SQLite (local dev) or the
