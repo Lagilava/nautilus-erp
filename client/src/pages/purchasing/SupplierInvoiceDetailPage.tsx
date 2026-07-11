@@ -8,6 +8,7 @@ import { fmtMoney, fmtDate } from '../../lib/format';
 import { PAYMENT_METHODS } from '../../lib/status';
 import { Loading, ErrorNote, Spinner } from '../../components/ui';
 import { DetailScaffold, SummaryRow } from '../../components/DetailScaffold';
+import { AttachmentsPanel } from '../../components/AttachmentsPanel';
 import { Modal } from '../../components/Modal';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../auth/AuthContext';
@@ -70,29 +71,33 @@ export function SupplierInvoiceDetailPage() {
       }
     >
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="card overflow-hidden lg:col-span-2">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line">
-                <th className="table-head px-4 py-3">Description</th>
-                <th className="table-head px-4 py-3 text-right">Qty</th>
-                <th className="table-head px-4 py-3 text-right">Unit cost</th>
-                <th className="table-head px-4 py-3 text-right">Tax</th>
-                <th className="table-head px-4 py-3 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {inv.lines.map((l) => (
-                <tr key={l.id}>
-                  <td className="px-4 py-3 text-ink-soft">{l.description}</td>
-                  <td className="px-4 py-3 text-right tabular">{l.quantity}</td>
-                  <td className="px-4 py-3 text-right tabular">{fmtMoney(l.unitCost)}</td>
-                  <td className="px-4 py-3 text-right tabular text-ink-muted">{l.taxRate}%</td>
-                  <td className="px-4 py-3 text-right tabular text-ink">{fmtMoney(l.lineTotal)}</td>
+        <div className="space-y-4 lg:col-span-2">
+          <div className="card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line">
+                  <th className="table-head px-4 py-3">Description</th>
+                  <th className="table-head px-4 py-3 text-right">Qty</th>
+                  <th className="table-head px-4 py-3 text-right">Unit cost</th>
+                  <th className="table-head px-4 py-3 text-right">Tax</th>
+                  <th className="table-head px-4 py-3 text-right">Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {inv.lines.map((l) => (
+                  <tr key={l.id}>
+                    <td className="px-4 py-3 text-ink-soft">{l.description}</td>
+                    <td className="px-4 py-3 text-right tabular">{l.quantity}</td>
+                    <td className="px-4 py-3 text-right tabular">{fmtMoney(l.unitCost)}</td>
+                    <td className="px-4 py-3 text-right tabular text-ink-muted">{l.taxRate}%</td>
+                    <td className="px-4 py-3 text-right tabular text-ink">{fmtMoney(l.lineTotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <AttachmentsPanel entityType="SupplierInvoice" entityId={id} />
         </div>
 
         <div className="card h-fit p-5">
@@ -170,8 +175,9 @@ function PaySupplierModal({ invoiceId, balance, onClose }: { invoiceId: string; 
         {error && <ErrorNote message={error} />}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="field-label">Amount (max {fmtMoney(balance)})</label>
+            <label className="field-label" htmlFor="payment-amount">Amount (max {fmtMoney(balance)})</label>
             <input
+              id="payment-amount"
               type="number"
               step="0.01"
               className="input"
@@ -180,8 +186,8 @@ function PaySupplierModal({ invoiceId, balance, onClose }: { invoiceId: string; 
             />
           </div>
           <div>
-            <label className="field-label">Method</label>
-            <select className="input" value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
+            <label className="field-label" htmlFor="method">Method</label>
+            <select id="method" className="input" value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
               {PAYMENT_METHODS.map((m) => (
                 <option key={m.value} value={m.value}>
                   {m.label}
@@ -191,8 +197,8 @@ function PaySupplierModal({ invoiceId, balance, onClose }: { invoiceId: string; 
           </div>
         </div>
         <div>
-          <label className="field-label">Reference (optional)</label>
-          <input className="input" value={reference} onChange={(e) => setReference(e.target.value)} />
+          <label className="field-label" htmlFor="payment-reference">Reference (optional)</label>
+          <input id="payment-reference" className="input" value={reference} onChange={(e) => setReference(e.target.value)} />
         </div>
       </div>
     </Modal>

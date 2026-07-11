@@ -7,6 +7,7 @@ import type { PurchaseOrderDetail } from '../../lib/types';
 import { fmtMoney, fmtDate } from '../../lib/format';
 import { Loading, ErrorNote, Spinner } from '../../components/ui';
 import { DetailScaffold, SummaryRow } from '../../components/DetailScaffold';
+import { AttachmentsPanel } from '../../components/AttachmentsPanel';
 import { Modal } from '../../components/Modal';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../auth/AuthContext';
@@ -102,33 +103,37 @@ export function PurchaseOrderDetailPage() {
       }
     >
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="card overflow-hidden lg:col-span-2">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line">
-                <th className="table-head px-4 py-3">Product</th>
-                <th className="table-head px-4 py-3 text-right">Ordered</th>
-                <th className="table-head px-4 py-3 text-right">Received</th>
-                <th className="table-head px-4 py-3 text-right">Unit cost</th>
-                <th className="table-head px-4 py-3 text-right">Line total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {order.lines.map((l) => (
-                <tr key={l.id}>
-                  <td className="px-4 py-3 text-ink-soft">{productName.get(l.productId) ?? l.productId.slice(0, 8)}</td>
-                  <td className="px-4 py-3 text-right tabular">{l.quantity}</td>
-                  <td className="px-4 py-3 text-right tabular">
-                    <span className={l.outstandingQuantity > 0 ? 'text-warning' : 'text-success'}>
-                      {l.quantityReceived}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right tabular">{fmtMoney(l.unitCost)}</td>
-                  <td className="px-4 py-3 text-right tabular text-ink">{fmtMoney(l.lineTotal)}</td>
+        <div className="space-y-4 lg:col-span-2">
+          <div className="card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line">
+                  <th className="table-head px-4 py-3">Product</th>
+                  <th className="table-head px-4 py-3 text-right">Ordered</th>
+                  <th className="table-head px-4 py-3 text-right">Received</th>
+                  <th className="table-head px-4 py-3 text-right">Unit cost</th>
+                  <th className="table-head px-4 py-3 text-right">Line total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {order.lines.map((l) => (
+                  <tr key={l.id}>
+                    <td className="px-4 py-3 text-ink-soft">{productName.get(l.productId) ?? l.productId.slice(0, 8)}</td>
+                    <td className="px-4 py-3 text-right tabular">{l.quantity}</td>
+                    <td className="px-4 py-3 text-right tabular">
+                      <span className={l.outstandingQuantity > 0 ? 'text-warning' : 'text-success'}>
+                        {l.quantityReceived}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular">{fmtMoney(l.unitCost)}</td>
+                    <td className="px-4 py-3 text-right tabular text-ink">{fmtMoney(l.lineTotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <AttachmentsPanel entityType="PurchaseOrder" entityId={id} />
         </div>
 
         <div className="card h-fit p-5">

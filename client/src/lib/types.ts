@@ -302,3 +302,14 @@ export interface ProblemDetails {
   status?: number;
   errors?: Record<string, string[]>;
 }
+
+/** A file uploaded against another record — see /api/attachments. */
+export interface Attachment {
+  id: string;
+  entityType: string;
+  entityId: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: string;
+}

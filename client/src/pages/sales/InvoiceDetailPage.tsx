@@ -9,6 +9,7 @@ import { fmtMoney, fmtDate } from '../../lib/format';
 import { statusTone, humanize, PAYMENT_METHODS } from '../../lib/status';
 import { Loading, ErrorNote, Spinner, StatusPill } from '../../components/ui';
 import { DetailScaffold, SummaryRow } from '../../components/DetailScaffold';
+import { AttachmentsPanel } from '../../components/AttachmentsPanel';
 import { Modal } from '../../components/Modal';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../auth/AuthContext';
@@ -136,6 +137,8 @@ export function InvoiceDetailPage() {
               )}
             </div>
           )}
+
+          <AttachmentsPanel entityType="Invoice" entityId={id} />
         </div>
 
         <div className="space-y-4">
@@ -230,8 +233,9 @@ function RecordPaymentModal({
         {error && <ErrorNote message={error} />}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="field-label">Amount (max {fmtMoney(balance)})</label>
+            <label className="field-label" htmlFor="payment-amount">Amount (max {fmtMoney(balance)})</label>
             <input
+              id="payment-amount"
               type="number"
               step="0.01"
               className="input"
@@ -240,8 +244,8 @@ function RecordPaymentModal({
             />
           </div>
           <div>
-            <label className="field-label">Method</label>
-            <select className="input" value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
+            <label className="field-label" htmlFor="method">Method</label>
+            <select id="method" className="input" value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
               {PAYMENT_METHODS.map((m) => (
                 <option key={m.value} value={m.value}>
                   {m.label}
@@ -251,8 +255,8 @@ function RecordPaymentModal({
           </div>
         </div>
         <div>
-          <label className="field-label">Reference (optional)</label>
-          <input className="input" value={reference} onChange={(e) => setReference(e.target.value)} />
+          <label className="field-label" htmlFor="payment-reference">Reference (optional)</label>
+          <input id="payment-reference" className="input" value={reference} onChange={(e) => setReference(e.target.value)} />
         </div>
       </div>
     </Modal>

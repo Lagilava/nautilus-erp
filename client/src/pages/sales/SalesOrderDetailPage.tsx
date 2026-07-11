@@ -7,6 +7,7 @@ import type { SalesOrderDetail } from '../../lib/types';
 import { fmtMoney, fmtDate } from '../../lib/format';
 import { Loading, ErrorNote, Spinner } from '../../components/ui';
 import { DetailScaffold, SummaryRow } from '../../components/DetailScaffold';
+import { AttachmentsPanel } from '../../components/AttachmentsPanel';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../auth/AuthContext';
 import { useProducts } from '../../lib/pickers';
@@ -93,27 +94,31 @@ export function SalesOrderDetailPage() {
       }
     >
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="card overflow-hidden lg:col-span-2">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line">
-                <th className="table-head px-4 py-3">Product</th>
-                <th className="table-head px-4 py-3 text-right">Qty</th>
-                <th className="table-head px-4 py-3 text-right">Unit price</th>
-                <th className="table-head px-4 py-3 text-right">Line total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {order.lines.map((l) => (
-                <tr key={l.id}>
-                  <td className="px-4 py-3 text-ink-soft">{productName.get(l.productId) ?? l.productId.slice(0, 8)}</td>
-                  <td className="px-4 py-3 text-right tabular">{l.quantity}</td>
-                  <td className="px-4 py-3 text-right tabular">{fmtMoney(l.unitPrice)}</td>
-                  <td className="px-4 py-3 text-right tabular text-ink">{fmtMoney(l.lineTotal)}</td>
+        <div className="space-y-4 lg:col-span-2">
+          <div className="card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line">
+                  <th className="table-head px-4 py-3">Product</th>
+                  <th className="table-head px-4 py-3 text-right">Qty</th>
+                  <th className="table-head px-4 py-3 text-right">Unit price</th>
+                  <th className="table-head px-4 py-3 text-right">Line total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {order.lines.map((l) => (
+                  <tr key={l.id}>
+                    <td className="px-4 py-3 text-ink-soft">{productName.get(l.productId) ?? l.productId.slice(0, 8)}</td>
+                    <td className="px-4 py-3 text-right tabular">{l.quantity}</td>
+                    <td className="px-4 py-3 text-right tabular">{fmtMoney(l.unitPrice)}</td>
+                    <td className="px-4 py-3 text-right tabular text-ink">{fmtMoney(l.lineTotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <AttachmentsPanel entityType="SalesOrder" entityId={id} />
         </div>
 
         <div className="card h-fit p-5">
