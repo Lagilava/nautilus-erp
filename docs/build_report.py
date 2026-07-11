@@ -236,7 +236,7 @@ def build():
         align=WD_ALIGN_PARAGRAPH.CENTER,
     )
     doc.add_paragraph()
-    para(doc, "9 July 2026", size=11, color=MUTED, align=WD_ALIGN_PARAGRAPH.CENTER)
+    para(doc, "11 July 2026", size=11, color=MUTED, align=WD_ALIGN_PARAGRAPH.CENTER)
     para(
         doc,
         "Prepared from the source code of the repository, not from a specification.",
@@ -393,6 +393,15 @@ def build():
         widths=[1.6, 2.2, 2.7],
     )
     caption(doc, "Table 2 — The six modules of Nautilus ERP.")
+    para(
+        doc,
+        "A seventh capability sits underneath these six rather than beside them: any record in any "
+        "module can carry file attachments — a scanned supplier invoice, a delivery photo, a signed "
+        "contract — uploaded, listed, downloaded and removed through the API by referencing the record "
+        "they belong to. This is implemented end to end on the server and is honestly a backend "
+        "capability today: no screen in the browser client yet uploads or displays a file. Section 11 "
+        "documents the endpoints.",
+    )
 
     h2(doc, "2.1 Catalogue and reference data")
     para(
@@ -631,7 +640,7 @@ def build():
             (
                 "Sign in / Forgot password / Reset password",
                 "Everyone",
-                "Email-and-password sign-in; a reset flow that never reveals whether an account exists",
+                "Email-and-password sign-in, with a code-entry step when the account has two-factor authentication on; a reset flow that never reveals whether an account exists",
             ),
             (
                 "Dashboard",
@@ -681,7 +690,7 @@ def build():
             (
                 "Profile",
                 "The signed-in user",
-                "Update your own name, contact details and password",
+                "Update your own name, contact details and password; set up or turn off two-factor authentication",
             ),
             (
                 "Users",
@@ -830,6 +839,18 @@ def build():
     )
     para(
         doc,
+        "Every account may add a second factor: a standard TOTP authenticator app (Google Authenticator, "
+        "Authy and similar). Turning it on requires proving possession of the authenticator with a live "
+        "code before it takes effect, so a mistaken setup can never lock the account out, and it issues a "
+        "set of one-time recovery codes for the case where the device is lost. Once enabled, a correct "
+        "password no longer signs a user in on its own: it returns a short-lived challenge, valid for five "
+        "minutes and scoped so it cannot be used as a bearer token anywhere else, which must then be "
+        "redeemed with a current authenticator code or an unused recovery code before session tokens are "
+        "issued. Multi-factor authentication is opt-in per account; there is no policy that requires it, "
+        "for Administrator accounts or otherwise.",
+    )
+    para(
+        doc,
         "Beyond authentication, the API applies rate limiting (tighter on the authentication endpoints than "
         "elsewhere), response compression, baseline security headers, HTTPS redirection outside development, "
         "and a startup guard that refuses to boot outside development if the JWT signing key is missing, "
@@ -848,14 +869,16 @@ def build():
     bullets(
         doc,
         [
-            "No multi-factor authentication. A password is the only factor.",
-            "No email verification of accounts, and no public self-registration — accounts are created by an administrator, which mitigates the first point but does not remove it.",
+            "Multi-factor authentication is available but not required of anyone, including Administrator accounts — there is no policy that enforces it.",
+            "No email verification of accounts, and no public self-registration — accounts are created by an administrator, which mitigates that but does not remove it.",
             "The refresh token is held in the browser's localStorage. This is convenient and survives a page reload, but it is readable by any script that manages to run on the page, so a cross-site scripting flaw would be more damaging than it would be with an HttpOnly cookie.",
+            "File attachments have no screen in the browser client. The upload, list, download and delete API exists and is tested, but nothing in the interface today calls it.",
             "No general ledger and no double-entry accounting. Nautilus ERP records operational transactions — stock, invoices, payments — not journals, chart of accounts or trial balance. It is not a substitute for accounting software.",
             "FRCS / VMS fiscalization is not integrated. Every issued invoice remains NotSubmitted. See section 7.1.",
             "Real-time notifications sent through SignalR are broadcast to every connected staff member. Per-user targeting exists in the code, but the business events that fire notifications use the broadcast path, so a notification about one branch's invoice reaches everyone signed in.",
-            "The email sender is a logging stub. Emails are queued for background delivery and then written to the log rather than sent; a real SMTP sender must be supplied.",
+            "Emails (password resets, notifications) are queued for background delivery and sent over real SMTP when a mail server is configured; left unconfigured, delivery falls back to a stub that writes the email to the log instead, which is what a fresh checkout does until someone supplies SMTP settings.",
             "The Hangfire background job store is in-memory, so queued work does not survive a restart of the API.",
+            "File attachments are written to local disk by default. That is durable on a single persistent instance but not on an ephemeral or multi-instance host; a cloud storage adapter would need to be substituted for those deployments, and the abstraction (IFileStorage) is written so that substitution needs no change to the callers.",
             "Multi-currency is modelled — FJD is the base currency and currencies are reference data — but there is no exchange-rate table in use and no bank reconciliation, RTGS/ACH or mobile-wallet payment integration. Mobile wallet is a payment method you may record, not a payment rail the system connects to.",
             "There is no offline mode. GUID primary keys keep that option open architecturally; nothing implements it.",
         ],
@@ -916,10 +939,10 @@ def build():
         [
             ("ERP.Domain", "Entities, enums, domain rules and domain exceptions. No external dependencies."),
             ("ERP.Application", "Use cases as CQRS commands and queries, validation, authorization rules, ports (interfaces) to the outside world."),
-            ("ERP.Infrastructure", "Adapters: JWT token service, email stub, fiscalization stub, SignalR notifications, Hangfire jobs, report exporters."),
+            ("ERP.Infrastructure", "Adapters: JWT token service, SMTP/logging-stub email, fiscalization stub, SignalR notifications, Hangfire jobs, report exporters, local file storage, Sentry error tracking."),
             ("ERP.Persistence", "EF Core DbContext, entity configurations, audit interceptor, seeding, SQL Server / SQLite migrations."),
             ("ERP.Persistence.Migrations.Postgres", "The PostgreSQL migration set, kept as its own project so provider-specific migrations never mix."),
-            ("ERP.API", "ASP.NET Core web API: 20 controllers, middleware, rate limiting, health checks, Swagger in development."),
+            ("ERP.API", "ASP.NET Core web API: 21 controllers, middleware, rate limiting, health checks, Swagger in development."),
             ("ERP.Shared", "Cross-cutting primitives shared by the layers (Result, Error, role names)."),
             ("client/", "React + TypeScript single-page application, built with Vite; TanStack Query for server state; Tailwind-based design system."),
         ],
@@ -947,10 +970,10 @@ def build():
     h1(doc, "11. The API surface")
     para(
         doc,
-        "The API exposes 75 endpoints across 20 controllers, all under /api and all requiring "
-        "authentication except sign-in, token refresh and the password-reset pair. Interactive "
-        "documentation is served at /swagger in development. The table groups the controllers by module; "
-        "docs/API.md in the repository documents each endpoint individually.",
+        "The API exposes 83 endpoints across 21 controllers, all under /api and all requiring "
+        "authentication except sign-in, the MFA challenge, token refresh and the password-reset pair. "
+        "Interactive documentation is served at /swagger in development. The table groups the controllers "
+        "by module; docs/API.md in the repository documents each endpoint individually.",
     )
     table(
         doc,
@@ -958,8 +981,8 @@ def build():
         [
             (
                 "Authentication & identity",
-                "Auth (8), Users (6)",
-                "Sign-in, refresh, logout, password change/forgot/reset, profile; user administration is Administrator-only",
+                "Auth (12), Users (6)",
+                "Sign-in, MFA challenge and self-service setup/enable/disable, refresh, logout, password change/forgot/reset, profile; user administration is Administrator-only",
             ),
             (
                 "Catalogue & reference",
@@ -986,10 +1009,15 @@ def build():
                 "Dashboard (2), Reports (1), Company (2), AuditLogs (1)",
                 "Dashboard figures and sales trend; inventory valuation export; company profile; audit trail (Administrator-only)",
             ),
+            (
+                "Documents",
+                "Attachments (4)",
+                "Upload, list, download and delete a file against any record, referenced by entity type and id; no browser screen calls it yet",
+            ),
         ],
         widths=[1.5, 3.0, 2.4],
     )
-    caption(doc, "Table 9 — The 20 controllers and 75 endpoints, grouped by module.")
+    caption(doc, "Table 9 — The 21 controllers and 83 endpoints, grouped by module.")
     para(
         doc,
         "Lifecycle actions are modelled as sub-resource POSTs rather than status fields in a PUT — for "
@@ -1043,7 +1071,12 @@ def build():
             (
                 "Identity & auditing",
                 "RefreshToken, LoginHistory, AuditLog",
-                "Refresh tokens stored SHA-256-hashed; AuditLog rows are written by the persistence interceptor",
+                "Refresh tokens stored SHA-256-hashed; AuditLog rows are written by the persistence interceptor. MFA state (authenticator key, recovery codes) is held in ASP.NET Identity's own store, not a Domain entity.",
+            ),
+            (
+                "Documents",
+                "Attachment",
+                "Generic file metadata keyed by (EntityType, EntityId) rather than a foreign key per module; file bytes are held by a pluggable storage adapter, not this row",
             ),
         ],
         widths=[1.4, 2.9, 2.6],
@@ -1076,6 +1109,13 @@ def build():
         "branches, warehouses, catalogue, trading partners and open documents — plus the three demo "
         "accounts listed in section 15. The seeder runs only in Development.",
     )
+    para(
+        doc,
+        "File attachments sit outside the EF Core model by design: the Attachment row is metadata, and "
+        "the bytes are held by an IFileStorage port implemented today as a local-disk adapter. Storage "
+        "keys are server-generated, never derived from a caller-supplied file name, so there is no "
+        "path-traversal surface from an attacker-chosen name.",
+    )
 
     # ============================================================ 14
     h1(doc, "14. Testing")
@@ -1087,12 +1127,16 @@ def build():
         "project acquires an outward dependency. ERP.IntegrationTests boots the real API in memory "
         "against a real database and drives it over HTTP, so authorization attributes, middleware, "
         "validation and persistence are all exercised together — including that a Staff token is "
-        "refused where it should be and accepted for goods receipts.",
+        "refused where it should be and accepted for goods receipts, and that a login challenge for an "
+        "MFA-enabled account is redeemable with a real TOTP code computed the same way an authenticator "
+        "app would, not a test-only bypass.",
     )
     para(
         doc,
-        "Across the two projects there are 87 test methods (xUnit facts and theories; theories expand "
-        "to more cases at run time). Run them with `dotnet test` at the repository root.",
+        "Across the two projects there are 97 test methods (xUnit facts and theories; theories expand "
+        "to more cases at run time). Run them with `dotnet test` at the repository root. A GitHub Actions "
+        "workflow runs the full suite, plus a frontend lint and build, on every push and pull request "
+        "against main.",
     )
 
     # ============================================================ 15
@@ -1149,6 +1193,13 @@ def build():
         "prompted for on first deploy rather than generated, because the application refuses to boot "
         "with a weak administrator password rather than seed a guessable one.",
     )
+    para(
+        doc,
+        "Error tracking is optional and off unless configured: supplying a Sentry DSN (Sentry__Dsn on "
+        "the API; VITE_SENTRY_DSN, baked in at client build time, on the browser client) turns it on. "
+        "Left blank, both SDKs are fully disabled and every call into them is a no-op, so this costs "
+        "nothing for a deployment without a Sentry project.",
+    )
 
     # ============================================================ 16
     h1(doc, "16. Roadmap")
@@ -1161,12 +1212,13 @@ def build():
         doc,
         [
             "Verify the FRCS TPOS / VMS specification and implement a real IFiscalizationService adapter, including accredited invoice numbering. Until this exists, invoices remain NotSubmitted.",
-            "Move the refresh token out of localStorage and into an HttpOnly, Secure, SameSite cookie, and add multi-factor authentication for administrators at minimum.",
-            "Add email verification and a real SMTP sender, and move Hangfire from in-memory storage to a durable store so queued work survives a restart.",
+            "Move the refresh token out of localStorage and into an HttpOnly, Secure, SameSite cookie, and add a policy requiring multi-factor authentication for Administrator accounts rather than leaving it opt-in.",
+            "Build the browser screens for the attachments API — upload and view files on the relevant detail pages — and add email verification of accounts. Move Hangfire from in-memory storage to a durable store so queued work survives a restart.",
             "Target real-time notifications at the users who should receive them, rather than broadcasting every event to every signed-in staff member.",
             "Decide the accounting boundary: either add a general ledger with double-entry posting from the operational documents, or define and build a clean export to the accounting package the business already uses.",
             "Implement effective-dated exchange rates and, if the business needs them, bank reconciliation against Fiji bank statement formats and the RBF payment rails.",
-            "Production operations: SQL Server or PostgreSQL with a tested backup and restore, secrets in a managed vault rather than environment variables, centralised log shipping, and a load test of the reporting queries against a realistic data volume.",
+            "For an ephemeral or multi-instance deployment, substitute a cloud storage adapter for file attachments (local disk today) via the existing IFileStorage abstraction.",
+            "Production operations: SQL Server or PostgreSQL with a tested backup and restore, secrets in a managed vault rather than environment variables, centralised log shipping alongside the optional Sentry error tracking, and a load test of the reporting queries against a realistic data volume.",
         ],
     )
     para(
@@ -1178,7 +1230,7 @@ def build():
     doc.add_paragraph()
     para(
         doc,
-        "Document generated from source by docs/build_report.py on 9 July 2026.",
+        "Document generated from source by docs/build_report.py on 11 July 2026.",
         size=9,
         color=MUTED,
         italic=True,
