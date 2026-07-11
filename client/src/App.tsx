@@ -1,27 +1,49 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { AppLayout } from './app/AppLayout';
+import { Loading } from './components/ui';
+
+// Route-level code-splitting: each page becomes its own chunk, fetched on navigation
+// rather than bundled into the single ~950KB initial download. Auth pages (the very first
+// thing an unauthenticated visitor loads) stay eager so sign-in isn't gated on a second
+// round trip; everything behind ProtectedRoute is lazy.
 import { LoginPage } from './pages/LoginPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { DashboardPage } from './pages/DashboardPage';
-import { ProductsPage } from './pages/ProductsPage';
-import { CustomersPage } from './pages/CustomersPage';
-import { SuppliersPage } from './pages/SuppliersPage';
-import { InventoryPage } from './pages/InventoryPage';
-import { AuditPage } from './pages/AuditPage';
-import { ReportsPage } from './pages/ReportsPage';
-import { SalesOrdersPage } from './pages/sales/SalesOrdersPage';
-import { SalesOrderDetailPage } from './pages/sales/SalesOrderDetailPage';
-import { InvoicesPage } from './pages/sales/InvoicesPage';
-import { InvoiceDetailPage } from './pages/sales/InvoiceDetailPage';
-import { PurchaseOrdersPage } from './pages/purchasing/PurchaseOrdersPage';
-import { PurchaseOrderDetailPage } from './pages/purchasing/PurchaseOrderDetailPage';
-import { SupplierInvoicesPage } from './pages/purchasing/SupplierInvoicesPage';
-import { SupplierInvoiceDetailPage } from './pages/purchasing/SupplierInvoiceDetailPage';
-import { UsersPage } from './pages/admin/UsersPage';
-import { SettingsPage } from './pages/admin/SettingsPage';
+
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
+const ProductsPage = lazy(() => import('./pages/ProductsPage').then((m) => ({ default: m.ProductsPage })));
+const CustomersPage = lazy(() => import('./pages/CustomersPage').then((m) => ({ default: m.CustomersPage })));
+const SuppliersPage = lazy(() => import('./pages/SuppliersPage').then((m) => ({ default: m.SuppliersPage })));
+const InventoryPage = lazy(() => import('./pages/InventoryPage').then((m) => ({ default: m.InventoryPage })));
+const AuditPage = lazy(() => import('./pages/AuditPage').then((m) => ({ default: m.AuditPage })));
+const ReportsPage = lazy(() => import('./pages/ReportsPage').then((m) => ({ default: m.ReportsPage })));
+const SalesOrdersPage = lazy(() =>
+  import('./pages/sales/SalesOrdersPage').then((m) => ({ default: m.SalesOrdersPage })),
+);
+const SalesOrderDetailPage = lazy(() =>
+  import('./pages/sales/SalesOrderDetailPage').then((m) => ({ default: m.SalesOrderDetailPage })),
+);
+const InvoicesPage = lazy(() => import('./pages/sales/InvoicesPage').then((m) => ({ default: m.InvoicesPage })));
+const InvoiceDetailPage = lazy(() =>
+  import('./pages/sales/InvoiceDetailPage').then((m) => ({ default: m.InvoiceDetailPage })),
+);
+const PurchaseOrdersPage = lazy(() =>
+  import('./pages/purchasing/PurchaseOrdersPage').then((m) => ({ default: m.PurchaseOrdersPage })),
+);
+const PurchaseOrderDetailPage = lazy(() =>
+  import('./pages/purchasing/PurchaseOrderDetailPage').then((m) => ({ default: m.PurchaseOrderDetailPage })),
+);
+const SupplierInvoicesPage = lazy(() =>
+  import('./pages/purchasing/SupplierInvoicesPage').then((m) => ({ default: m.SupplierInvoicesPage })),
+);
+const SupplierInvoiceDetailPage = lazy(() =>
+  import('./pages/purchasing/SupplierInvoiceDetailPage').then((m) => ({ default: m.SupplierInvoiceDetailPage })),
+);
+const UsersPage = lazy(() => import('./pages/admin/UsersPage').then((m) => ({ default: m.UsersPage })));
+const SettingsPage = lazy(() => import('./pages/admin/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 
 export default function App() {
   return (
@@ -37,28 +59,154 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/inventory" element={<InventoryPage />} />
-        <Route path="/customers" element={<CustomersPage />} />
-        <Route path="/suppliers" element={<SuppliersPage />} />
+        <Route
+          path="/"
+          element={
+            <Suspense fallback={<Loading />}>
+              <DashboardPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <Suspense fallback={<Loading />}>
+              <ProfilePage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/products"
+          element={
+            <Suspense fallback={<Loading />}>
+              <ProductsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/inventory"
+          element={
+            <Suspense fallback={<Loading />}>
+              <InventoryPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/customers"
+          element={
+            <Suspense fallback={<Loading />}>
+              <CustomersPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/suppliers"
+          element={
+            <Suspense fallback={<Loading />}>
+              <SuppliersPage />
+            </Suspense>
+          }
+        />
 
-        <Route path="/sales-orders" element={<SalesOrdersPage />} />
-        <Route path="/sales-orders/:id" element={<SalesOrderDetailPage />} />
-        <Route path="/invoices" element={<InvoicesPage />} />
-        <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
+        <Route
+          path="/sales-orders"
+          element={
+            <Suspense fallback={<Loading />}>
+              <SalesOrdersPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/sales-orders/:id"
+          element={
+            <Suspense fallback={<Loading />}>
+              <SalesOrderDetailPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/invoices"
+          element={
+            <Suspense fallback={<Loading />}>
+              <InvoicesPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/invoices/:id"
+          element={
+            <Suspense fallback={<Loading />}>
+              <InvoiceDetailPage />
+            </Suspense>
+          }
+        />
 
-        <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
-        <Route path="/purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
-        <Route path="/supplier-invoices" element={<SupplierInvoicesPage />} />
-        <Route path="/supplier-invoices/:id" element={<SupplierInvoiceDetailPage />} />
+        <Route
+          path="/purchase-orders"
+          element={
+            <Suspense fallback={<Loading />}>
+              <PurchaseOrdersPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/purchase-orders/:id"
+          element={
+            <Suspense fallback={<Loading />}>
+              <PurchaseOrderDetailPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/supplier-invoices"
+          element={
+            <Suspense fallback={<Loading />}>
+              <SupplierInvoicesPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/supplier-invoices/:id"
+          element={
+            <Suspense fallback={<Loading />}>
+              <SupplierInvoiceDetailPage />
+            </Suspense>
+          }
+        />
 
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/audit" element={<AuditPage />} />
+        <Route
+          path="/reports"
+          element={
+            <Suspense fallback={<Loading />}>
+              <ReportsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/audit"
+          element={
+            <Suspense fallback={<Loading />}>
+              <AuditPage />
+            </Suspense>
+          }
+        />
 
-        <Route path="/admin/users" element={<UsersPage />} />
-        <Route path="/admin/settings" element={<SettingsPage />} />
+        <Route
+          path="/admin/users"
+          element={
+            <Suspense fallback={<Loading />}>
+              <UsersPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <Suspense fallback={<Loading />}>
+              <SettingsPage />
+            </Suspense>
+          }
+        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
