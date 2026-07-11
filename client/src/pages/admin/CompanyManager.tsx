@@ -45,8 +45,8 @@ export function CompanyManager() {
 
   const field = (key: keyof Company, label: string, type = 'text') => (
     <div>
-      <label className="field-label">{label}</label>
-      <input
+      <label className="field-label" htmlFor="label">{label}</label>
+      <input id="label"
         className="input"
         type={type}
         value={(form[key] as string) ?? ''}
@@ -69,8 +69,8 @@ export function CompanyManager() {
         <div className="grid grid-cols-2 gap-4">
           {field('tin', 'FRCS TIN')}
           <div>
-            <label className="field-label">Base currency</label>
-            <input className="input bg-canvas" value={form.baseCurrency} disabled />
+            <label className="field-label" htmlFor="base-currency">Base currency</label>
+            <input id="base-currency" className="input bg-canvas" value={form.baseCurrency} disabled />
           </div>
         </div>
         {field('addressLine1', 'Address')}

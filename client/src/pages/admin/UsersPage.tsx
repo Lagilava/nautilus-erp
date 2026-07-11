@@ -193,21 +193,21 @@ function NewUserModal({ onClose }: { onClose: () => void }) {
         {error && <ErrorNote message={error} />}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="field-label">First name</label>
-            <input className="input" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+            <label className="field-label" htmlFor="first-name">First name</label>
+            <input id="first-name" className="input" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
           </div>
           <div>
-            <label className="field-label">Last name</label>
-            <input className="input" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
+            <label className="field-label" htmlFor="last-name">Last name</label>
+            <input id="last-name" className="input" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
           </div>
         </div>
         <div>
-          <label className="field-label">Email</label>
-          <input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <label className="field-label" htmlFor="email">Email</label>
+          <input id="email" className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         </div>
         <div>
-          <label className="field-label">Temporary password (min 8 chars)</label>
-          <input
+          <label className="field-label" htmlFor="temporary-password-min-8-chars">Temporary password (min 8 chars)</label>
+          <input id="temporary-password-min-8-chars"
             className="input"
             type="text"
             value={form.password}
@@ -215,8 +215,8 @@ function NewUserModal({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div>
-          <label className="field-label">Branch scope</label>
-          <select className="input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+          <label className="field-label" htmlFor="branch-scope">Branch scope</label>
+          <select id="branch-scope" className="input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
             <option value="">All branches (unrestricted)</option>
             {branches.data?.map((b) => (
               <option key={b.id} value={b.id}>
@@ -228,13 +228,14 @@ function NewUserModal({ onClose }: { onClose: () => void }) {
             Scoped users only see stock, sales, and purchasing for their branch.
           </p>
         </div>
-        <div>
-          <label className="field-label">Roles</label>
+        <fieldset>
+          <legend className="field-label">Roles</legend>
           <div className="flex flex-wrap gap-2">
             {ALL_ROLES.map((r) => (
               <button
                 key={r}
                 type="button"
+                aria-pressed={roles.includes(r)}
                 onClick={() => toggleRole(r)}
                 className={`pill border transition-colors ${
                   roles.includes(r)
@@ -246,7 +247,7 @@ function NewUserModal({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
-        </div>
+        </fieldset>
       </div>
     </Modal>
   );

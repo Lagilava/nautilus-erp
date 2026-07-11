@@ -17,8 +17,13 @@ export function Modal({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/30 p-4 sm:p-8">
+      {/* Native <dialog> only gets ARIA modality (backdrop, focus trap) via the imperative
+          showModal() API; used declaratively via the `open` attribute it behaves as a
+          non-modal dialog, which would be a regression from the current div + role="dialog"
+          + aria-modal="true", which already communicates modality correctly to assistive tech. */}
       <div
         className="mt-4 w-full max-w-lg rounded-lg border border-line bg-surface shadow-raised sm:mt-12"
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
         role="dialog"
         aria-modal="true"
       >

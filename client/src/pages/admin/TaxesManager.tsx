@@ -121,17 +121,17 @@ function NewTaxModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
         {error && <ErrorNote message={error} />}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="field-label">Code</label>
-            <input className="input" value={code} onChange={(e) => setCode(e.target.value)} />
+            <label className="field-label" htmlFor="code">Code</label>
+            <input id="code" className="input" value={code} onChange={(e) => setCode(e.target.value)} />
           </div>
           <div>
-            <label className="field-label">Name</label>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+            <label className="field-label" htmlFor="name">Name</label>
+            <input id="name" className="input" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
         </div>
         <div>
-          <label className="field-label">Treatment</label>
-          <select className="input" value={treatment} onChange={(e) => setTreatment(e.target.value as typeof treatment)}>
+          <label className="field-label" htmlFor="treatment">Treatment</label>
+          <select id="treatment" className="input" value={treatment} onChange={(e) => setTreatment(e.target.value as typeof treatment)}>
             <option value="Standard">Standard (rated)</option>
             <option value="ZeroRated">Zero-rated</option>
             <option value="Exempt">Exempt</option>
@@ -140,12 +140,12 @@ function NewTaxModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
         {treatment === 'Standard' && (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="field-label">Initial rate (%)</label>
-              <input className="input" type="number" step="0.01" value={percentage} onChange={(e) => setPercentage(e.target.value)} />
+              <label className="field-label" htmlFor="initial-rate">Initial rate (%)</label>
+              <input id="initial-rate" className="input" type="number" step="0.01" value={percentage} onChange={(e) => setPercentage(e.target.value)} />
             </div>
             <div>
-              <label className="field-label">Effective from</label>
-              <input className="input" type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
+              <label className="field-label" htmlFor="effective-from">Effective from</label>
+              <input id="effective-from" className="input" type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
             </div>
           </div>
         )}
@@ -195,12 +195,12 @@ function AddRateModal({ tax, onClose, onDone }: { tax: Tax; onClose: () => void;
         </p>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="field-label">New rate (%)</label>
-            <input className="input" type="number" step="0.01" value={percentage} onChange={(e) => setPercentage(e.target.value)} />
+            <label className="field-label" htmlFor="new-rate">New rate (%)</label>
+            <input id="new-rate" className="input" type="number" step="0.01" value={percentage} onChange={(e) => setPercentage(e.target.value)} />
           </div>
           <div>
-            <label className="field-label">Effective from</label>
-            <input className="input" type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
+            <label className="field-label" htmlFor="effective-from-2">Effective from</label>
+            <input id="effective-from-2" className="input" type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
           </div>
         </div>
       </div>

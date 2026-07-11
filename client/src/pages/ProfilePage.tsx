@@ -109,23 +109,23 @@ export function ProfilePage() {
           {profileError && <ErrorNote message={profileError} />}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="field-label">First name</label>
-              <input className="input" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              <label className="field-label" htmlFor="first-name">First name</label>
+              <input id="first-name" className="input" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
             </div>
             <div>
-              <label className="field-label">Last name</label>
-              <input className="input" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              <label className="field-label" htmlFor="last-name">Last name</label>
+              <input id="last-name" className="input" value={lastName} onChange={(e) => setLastName(e.target.value)} />
             </div>
           </div>
 
           {/* Read-only, privileged attributes. */}
           <div>
-            <label className="field-label">Email</label>
-            <input className="input bg-canvas" value={user?.email ?? ''} disabled />
+            <label className="field-label" htmlFor="email">Email</label>
+            <input id="email" className="input bg-canvas" value={user?.email ?? ''} disabled />
             <p className="mt-1 text-xs text-ink-muted">Contact an administrator to change your email.</p>
           </div>
           <div>
-            <label className="field-label">Roles</label>
+            <span className="field-label">Roles</span>
             <div className="flex flex-wrap gap-1.5">
               {user?.roles.map((r) => (
                 <StatusPill key={r} label={r} tone="neutral" />
@@ -149,8 +149,8 @@ export function ProfilePage() {
           <p className="text-sm text-ink-muted">Your current password is required — a live session is not enough.</p>
           {pwError && <ErrorNote message={pwError} />}
           <div>
-            <label className="field-label">Current password</label>
-            <input
+            <label className="field-label" htmlFor="current-password">Current password</label>
+            <input id="current-password"
               className="input"
               type="password"
               value={currentPassword}
@@ -158,12 +158,12 @@ export function ProfilePage() {
             />
           </div>
           <div>
-            <label className="field-label">New password</label>
-            <input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            <label className="field-label" htmlFor="new-password">New password</label>
+            <input id="new-password" className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
           </div>
           <div>
-            <label className="field-label">Confirm new password</label>
-            <input
+            <label className="field-label" htmlFor="confirm-new-password">Confirm new password</label>
+            <input id="confirm-new-password"
               className={`input ${confirmPassword && confirmPassword !== newPassword ? 'input-error' : ''}`}
               type="password"
               value={confirmPassword}
@@ -208,17 +208,17 @@ export function ProfilePage() {
                 then confirm with the 6-digit code it generates.
               </p>
               <div>
-                <label className="field-label">Setup key</label>
-                <input className="input bg-canvas font-mono text-sm" value={setup.sharedKey} readOnly />
+                <label className="field-label" htmlFor="setup-key">Setup key</label>
+                <input id="setup-key" className="input bg-canvas font-mono text-sm" value={setup.sharedKey} readOnly />
               </div>
               <div>
-                <label className="field-label">6-digit code</label>
+                <label className="field-label" htmlFor="6-digit-code">6-digit code</label>
                 <input
+                  id="6-digit-code"
                   className="input"
                   placeholder="123456"
                   value={mfaCode}
                   onChange={(e) => setMfaCode(e.target.value)}
-                  autoFocus
                 />
               </div>
               <div className="flex justify-end gap-2">
@@ -246,8 +246,8 @@ export function ProfilePage() {
                 Enter your current password to turn two-factor authentication off.
               </p>
               <div>
-                <label className="field-label">Current password</label>
-                <input
+                <label className="field-label" htmlFor="current-password-2">Current password</label>
+                <input id="current-password-2"
                   className="input"
                   type="password"
                   value={disablePassword}

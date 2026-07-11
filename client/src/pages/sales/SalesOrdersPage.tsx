@@ -169,8 +169,8 @@ function NewSalesOrderModal({ onClose, onCreated }: { onClose: () => void; onCre
           {error && <ErrorNote message={error} />}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="field-label">Customer</label>
-              <select className="input" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+              <label className="field-label" htmlFor="customer">Customer</label>
+              <select id="customer" className="input" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
                 <option value="">Select…</option>
                 {customers.data?.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -180,8 +180,8 @@ function NewSalesOrderModal({ onClose, onCreated }: { onClose: () => void; onCre
               </select>
             </div>
             <div>
-              <label className="field-label">Warehouse</label>
-              <select className="input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
+              <label className="field-label" htmlFor="warehouse">Warehouse</label>
+              <select id="warehouse" className="input" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
                 <option value="">Select…</option>
                 {warehouses.data?.map((w) => (
                   <option key={w.id} value={w.id}>
@@ -192,8 +192,8 @@ function NewSalesOrderModal({ onClose, onCreated }: { onClose: () => void; onCre
             </div>
           </div>
           <div>
-            <label className="field-label">Order date</label>
-            <input type="date" className="input" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
+            <label className="field-label" htmlFor="order-date">Order date</label>
+            <input id="order-date" type="date" className="input" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
           </div>
           <LineItemsEditor products={products.data ?? []} priceLabel="unit price" lines={lines} onChange={setLines} />
         </div>

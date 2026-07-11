@@ -110,7 +110,6 @@ export function LoginPage() {
                   <input
                     id="code"
                     autoComplete="one-time-code"
-                    autoFocus
                     className="input"
                     placeholder="123456"
                     value={code}

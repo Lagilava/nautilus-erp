@@ -64,7 +64,12 @@ export function AppLayout() {
       {/* Mobile drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-ink/30" onClick={() => setMobileOpen(false)} />
+          <button
+            type="button"
+            aria-label="Close menu"
+            className="absolute inset-0 bg-ink/30"
+            onClick={() => setMobileOpen(false)}
+          />
           <aside className="absolute left-0 top-0 h-full w-64 border-r border-line bg-surface">{sidebar}</aside>
         </div>
       )}

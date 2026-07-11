@@ -160,35 +160,35 @@ function CreateCustomerModal({ onClose }: { onClose: () => void }) {
         {error && <ErrorNote message={error} />}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="field-label">Code</label>
-            <input className="input" {...register('code')} />
+            <label className="field-label" htmlFor="code">Code</label>
+            <input id="code" className="input" {...register('code')} />
             {errors.code && <p className="mt-1 text-xs text-danger">{errors.code.message}</p>}
           </div>
           <div>
-            <label className="field-label">Name</label>
-            <input className="input" {...register('name')} />
+            <label className="field-label" htmlFor="name">Name</label>
+            <input id="name" className="input" {...register('name')} />
             {errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="field-label">Email</label>
-            <input className="input" {...register('email')} />
+            <label className="field-label" htmlFor="email">Email</label>
+            <input id="email" className="input" {...register('email')} />
             {errors.email && <p className="mt-1 text-xs text-danger">{errors.email.message}</p>}
           </div>
           <div>
-            <label className="field-label">Phone</label>
-            <input className="input" {...register('phone')} />
+            <label className="field-label" htmlFor="phone">Phone</label>
+            <input id="phone" className="input" {...register('phone')} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="field-label">TIN</label>
-            <input className="input" {...register('taxIdentificationNumber')} />
+            <label className="field-label" htmlFor="tin">TIN</label>
+            <input id="tin" className="input" {...register('taxIdentificationNumber')} />
           </div>
           <div>
-            <label className="field-label">Credit limit (FJD)</label>
-            <input type="number" step="0.01" className="input" {...register('creditLimit', { valueAsNumber: true })} />
+            <label className="field-label" htmlFor="credit-limit-fjd">Credit limit (FJD)</label>
+            <input id="credit-limit-fjd" type="number" step="0.01" className="input" {...register('creditLimit', { valueAsNumber: true })} />
           </div>
         </div>
       </form>

@@ -59,8 +59,8 @@ export function ResetPasswordPage() {
               <div className="mt-5 space-y-4">
                 {error && <ErrorNote message={error} />}
                 <div>
-                  <label className="field-label">New password</label>
-                  <input
+                  <label className="field-label" htmlFor="new-password">New password</label>
+                  <input id="new-password"
                     className="input"
                     type="password"
                     value={newPassword}
@@ -68,8 +68,8 @@ export function ResetPasswordPage() {
                   />
                 </div>
                 <div>
-                  <label className="field-label">Confirm password</label>
-                  <input
+                  <label className="field-label" htmlFor="confirm-password">Confirm password</label>
+                  <input id="confirm-password"
                     className={`input ${confirm && confirm !== newPassword ? 'input-error' : ''}`}
                     type="password"
                     value={confirm}

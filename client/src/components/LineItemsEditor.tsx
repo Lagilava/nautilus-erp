@@ -29,7 +29,7 @@ export function LineItemsEditor({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <label className="field-label mb-0">Line items</label>
+        <span className="field-label mb-0">Line items</span>
         <button type="button" className="btn-ghost px-2 py-1 text-xs" onClick={add}>
           <Plus className="h-3.5 w-3.5" /> Add line
         </button>
