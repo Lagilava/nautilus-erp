@@ -397,10 +397,11 @@ def build():
         doc,
         "A seventh capability sits underneath these six rather than beside them: any record in any "
         "module can carry file attachments — a scanned supplier invoice, a delivery photo, a signed "
-        "contract — uploaded, listed, downloaded and removed through the API by referencing the record "
-        "they belong to. This is implemented end to end on the server and is honestly a backend "
-        "capability today: no screen in the browser client yet uploads or displays a file. Section 11 "
-        "documents the endpoints.",
+        "contract — uploaded, listed, downloaded and removed by referencing the record they belong to, "
+        "without a schema change per module. The screen is live today on the four document detail pages "
+        "— sales orders, customer invoices, purchase orders, supplier invoices — as an Attachments card "
+        "alongside each document's lines; other record types (products, customers, suppliers) can use "
+        "the same API but do not yet have the screen wired in. Section 11 documents the endpoints.",
     )
 
     h2(doc, "2.1 Catalogue and reference data")
@@ -665,22 +666,22 @@ def build():
             (
                 "Sales orders → order detail",
                 "All roles (read); Admin and Manager act",
-                "Capture an order, confirm it, fulfil it from stock, raise the invoice from it",
+                "Capture an order, confirm it, fulfil it from stock, raise the invoice from it; attach files (any signed-in role)",
             ),
             (
                 "Invoices → invoice detail",
                 "All roles (read); Admin and Manager act",
-                "Issue the tax invoice, record payments against it, download the Fiji-format PDF, void (subject to the rules in section 3.3)",
+                "Issue the tax invoice, record payments against it, download the Fiji-format PDF, void (subject to the rules in section 3.3); attach files (any signed-in role)",
             ),
             (
                 "Purchase orders → order detail",
                 "All roles (read); Staff may post receipts; Admin and Manager act",
-                "Raise and confirm an order, record goods receipts as deliveries arrive",
+                "Raise and confirm an order, record goods receipts as deliveries arrive; attach files (any signed-in role)",
             ),
             (
                 "Supplier invoices → detail",
                 "All roles (read); Admin and Manager act",
-                "Enter the supplier's bill against the order, approve it, record payments",
+                "Enter the supplier's bill against the order, approve it, record payments; attach files (any signed-in role)",
             ),
             (
                 "Reports",
@@ -872,7 +873,7 @@ def build():
             "Multi-factor authentication is available but not required of anyone, including Administrator accounts — there is no policy that enforces it.",
             "No email verification of accounts, and no public self-registration — accounts are created by an administrator, which mitigates that but does not remove it.",
             "The refresh token is held in the browser's localStorage. This is convenient and survives a page reload, but it is readable by any script that manages to run on the page, so a cross-site scripting flaw would be more damaging than it would be with an HttpOnly cookie.",
-            "File attachments have no screen in the browser client. The upload, list, download and delete API exists and is tested, but nothing in the interface today calls it.",
+            "File attachments have a screen on the four document detail pages (sales orders, invoices, purchase orders, supplier invoices) but not on other record types — products, customers and suppliers can be attached to over the API, but nothing in the interface calls it there yet.",
             "No general ledger and no double-entry accounting. Nautilus ERP records operational transactions — stock, invoices, payments — not journals, chart of accounts or trial balance. It is not a substitute for accounting software.",
             "FRCS / VMS fiscalization is not integrated. Every issued invoice remains NotSubmitted. See section 7.1.",
             "Real-time notifications sent through SignalR are broadcast to every connected staff member. Per-user targeting exists in the code, but the business events that fire notifications use the broadcast path, so a notification about one branch's invoice reaches everyone signed in.",
@@ -944,7 +945,7 @@ def build():
             ("ERP.Persistence.Migrations.Postgres", "The PostgreSQL migration set, kept as its own project so provider-specific migrations never mix."),
             ("ERP.API", "ASP.NET Core web API: 21 controllers, middleware, rate limiting, health checks, Swagger in development."),
             ("ERP.Shared", "Cross-cutting primitives shared by the layers (Result, Error, role names)."),
-            ("client/", "React + TypeScript single-page application, built with Vite; TanStack Query for server state; Tailwind-based design system."),
+            ("client/", "React + TypeScript single-page application, built with Vite; TanStack Query for server state; Tailwind-based design system; route-level code-splitting; Vitest + React Testing Library."),
         ],
         widths=[2.2, 4.7],
     )
@@ -1012,7 +1013,7 @@ def build():
             (
                 "Documents",
                 "Attachments (4)",
-                "Upload, list, download and delete a file against any record, referenced by entity type and id; no browser screen calls it yet",
+                "Upload, list, download and delete a file against any record, referenced by entity type and id; the browser client uses it on the four document detail pages",
             ),
         ],
         widths=[1.5, 3.0, 2.4],
@@ -1134,9 +1135,25 @@ def build():
     para(
         doc,
         "Across the two projects there are 97 test methods (xUnit facts and theories; theories expand "
-        "to more cases at run time). Run them with `dotnet test` at the repository root. A GitHub Actions "
-        "workflow runs the full suite, plus a frontend lint and build, on every push and pull request "
-        "against main.",
+        "to more cases at run time). Run them with `dotnet test` at the repository root.",
+    )
+    para(
+        doc,
+        "The browser client carries its own suite: Vitest with React Testing Library, 37 tests across "
+        "money/date formatting, the API error-message unwrapping, and — the two places a silent "
+        "regression would matter most — the full authentication state machine (silent re-auth on boot, "
+        "the login/MFA-challenge/verify sequence against a mocked API, the forced-logout event) and the "
+        "sign-in form itself driven the way a person would, through react-hook-form and zod validation, "
+        "not by calling internal functions directly. Run them with `npm run test` in client/.",
+    )
+    para(
+        doc,
+        "A GitHub Actions workflow runs the backend suite, the frontend suite, a frontend lint pass, "
+        "and both builds, on every push and pull request against main — so a regression is caught before "
+        "it merges, not after someone notices it in the running application. That lint pass includes "
+        "accessibility rules (oxlint's jsx-a11y plugin): every form field's label is associated with its "
+        "control so a screen reader can announce what it's asking for, interactive elements are "
+        "reachable by keyboard, and pages avoid disorienting focus jumps.",
     )
 
     # ============================================================ 15
@@ -1213,7 +1230,7 @@ def build():
         [
             "Verify the FRCS TPOS / VMS specification and implement a real IFiscalizationService adapter, including accredited invoice numbering. Until this exists, invoices remain NotSubmitted.",
             "Move the refresh token out of localStorage and into an HttpOnly, Secure, SameSite cookie, and add a policy requiring multi-factor authentication for Administrator accounts rather than leaving it opt-in.",
-            "Build the browser screens for the attachments API — upload and view files on the relevant detail pages — and add email verification of accounts. Move Hangfire from in-memory storage to a durable store so queued work survives a restart.",
+            "Extend the attachments screen to the remaining record types (products, customers, suppliers) beyond the four document detail pages it already covers, and add email verification of accounts. Move Hangfire from in-memory storage to a durable store so queued work survives a restart.",
             "Target real-time notifications at the users who should receive them, rather than broadcasting every event to every signed-in staff member.",
             "Decide the accounting boundary: either add a general ledger with double-entry posting from the operational documents, or define and build a clean export to the accounting package the business already uses.",
             "Implement effective-dated exchange rates and, if the business needs them, bank reconciliation against Fiji bank statement formats and the RBF payment rails.",
