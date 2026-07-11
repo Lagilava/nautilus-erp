@@ -3,6 +3,7 @@ using ERP.Application.Common.Interfaces;
 using ERP.Domain.Auditing;
 using ERP.Domain.Catalog;
 using ERP.Domain.Common;
+using ERP.Domain.Documents;
 using ERP.Domain.Identity;
 using ERP.Domain.Inventory;
 using ERP.Domain.Organization;
@@ -51,6 +52,8 @@ public sealed class ApplicationDbContext
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
+
+    public DbSet<Attachment> Attachments => Set<Attachment>();
 
     public DbSet<Currency> Currencies => Set<Currency>();
     public DbSet<UnitOfMeasure> UnitsOfMeasure => Set<UnitOfMeasure>();

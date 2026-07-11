@@ -1,5 +1,6 @@
 using ERP.Domain.Auditing;
 using ERP.Domain.Catalog;
+using ERP.Domain.Documents;
 using ERP.Domain.Identity;
 using ERP.Domain.Inventory;
 using ERP.Domain.Organization;
@@ -58,6 +59,8 @@ public interface IApplicationDbContext
 
     // Company identity (for compliant tax invoices).
     DbSet<CompanyProfile> CompanyProfiles { get; }
+
+    DbSet<Attachment> Attachments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

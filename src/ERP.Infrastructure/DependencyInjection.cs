@@ -4,6 +4,7 @@ using ERP.Infrastructure.Fiscalization;
 using ERP.Infrastructure.Identity;
 using ERP.Infrastructure.Notifications;
 using ERP.Infrastructure.Services;
+using ERP.Infrastructure.Storage;
 using Hangfire;
 using Hangfire.InMemory;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -40,8 +41,18 @@ public static class DependencyInjection
 
         AddJwtAuthentication(services, configuration);
         AddNotifications(services, configuration);
+        AddStorage(services, configuration);
 
         return services;
+    }
+
+    private static void AddStorage(IServiceCollection services, IConfiguration configuration)
+    {
+        // Local-disk provider today. A cloud provider (S3-compatible/Azure Blob) can be
+        // selected here later by branching on a "Storage:Provider" setting, the same way
+        // AddNotifications branches on "Smtp:Host" — callers depend only on IFileStorage.
+        services.Configure<FileStorageSettings>(configuration.GetSection(FileStorageSettings.SectionName));
+        services.AddSingleton<IFileStorage, LocalFileStorage>();
     }
 
     private static void AddNotifications(IServiceCollection services, IConfiguration configuration)

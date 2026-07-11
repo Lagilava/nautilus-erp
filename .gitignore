@@ -23,6 +23,9 @@ logs/
 *.db-shm
 *.db-wal
 
+## Local dev file storage (uploaded attachments)
+App_Data/
+
 ## Secrets / local config
 appsettings.*.local.json
 *.env
