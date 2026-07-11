@@ -23,6 +23,11 @@ try
         .ReadFrom.Services(services)
         .Enrich.FromLogContext());
 
+    // Error tracking. Options bind from the "Sentry" config section; an empty/absent Dsn
+    // (the default) disables the SDK entirely — SentrySdk calls become safe no-ops, so this
+    // is harmless for local dev and any fork without a Sentry project of its own.
+    builder.WebHost.UseSentry(options => options.Environment = builder.Environment.EnvironmentName);
+
     // Application + Infrastructure + Persistence composition.
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);

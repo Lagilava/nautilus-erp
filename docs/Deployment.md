@@ -88,6 +88,12 @@ docker build -t nautilus-client ./client
 | Allowed origins | `Cors__AllowedOrigins__0` | the SPA origin(s) |
 | Allowed hosts | `AllowedHosts` | your deployment hostname, to reject host-header spoofing |
 
+**Optional:**
+| Setting | Env var | Notes |
+|---------|---------|-------|
+| Error tracking (Sentry) | `Sentry__Dsn` | Blank (default) disables the SDK entirely. Frontend: `VITE_SENTRY_DSN` build-time var — see `client/.env.example`. |
+| SMTP delivery | `Smtp__Host`, `Smtp__Password`, ... | Blank `Smtp__Host` (default) falls back to a logging stub. |
+
 Local secrets in Development: `dotnet user-secrets` on `src/ERP.API`.
 
 > **Why the seeded admin is not in `appsettings.json`.** That file loads in *every* environment.

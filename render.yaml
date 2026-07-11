@@ -76,6 +76,11 @@ services:
       - key: Smtp__FromName
         value: Nautilus ERP
 
+      # Error tracking. Leave blank to keep Sentry disabled (default) — startup and every
+      # request behave identically either way. Paste a Dsn from sentry.io to turn it on.
+      - key: Sentry__Dsn
+        sync: false
+
   - type: web
     name: nautilus-client
     runtime: docker
@@ -90,3 +95,7 @@ services:
           type: web
           name: nautilus-api
           property: hostport
+    # Frontend error tracking (VITE_SENTRY_DSN) is a build-time value baked into the JS bundle
+    # by `npm run build`, not a runtime env var, so it cannot be wired through this blueprint's
+    # envVars the way API_UPSTREAM is. To enable it, set VITE_SENTRY_DSN in client/.env.local
+    # (or CI) before building the image and deploying manually — see client/.env.example.

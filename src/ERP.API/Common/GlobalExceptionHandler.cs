@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Sentry;
 
 namespace ERP.API.Common;
 
@@ -42,6 +43,10 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
 
             default:
                 _logger.LogError(exception, "Unhandled exception processing {Path}", httpContext.Request.Path);
+                // This handler marks the exception as handled (TryHandleAsync returns true), so
+                // it never reaches ASP.NET Core's own unhandled-exception path — capture it here
+                // explicitly instead. A no-op when Sentry has no Dsn configured.
+                SentrySdk.CaptureException(exception);
                 problem = new ProblemDetails
                 {
                     Status = StatusCodes.Status500InternalServerError,

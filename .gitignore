@@ -30,6 +30,8 @@ App_Data/
 appsettings.*.local.json
 *.env
 .env
+.env.local
+.env.*.local
 
 ## Rider
 .idea/
