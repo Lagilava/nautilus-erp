@@ -11,7 +11,7 @@ import type { MfaSetup } from '../lib/types';
  * privileged attributes only an administrator may alter.
  */
 export function ProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -28,7 +28,8 @@ export function ProfilePage() {
 
   const saveProfile = useMutation({
     mutationFn: () => api.put('/api/auth/me', { firstName, lastName }),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await refreshUser();
       qc.invalidateQueries();
       toast('Profile updated.');
       setProfileError(null);

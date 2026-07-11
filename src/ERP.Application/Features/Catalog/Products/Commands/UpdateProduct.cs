@@ -16,7 +16,8 @@ public sealed record UpdateProductCommand(
     Guid TaxId,
     decimal CostPrice,
     decimal SellingPrice,
-    bool IsActive) : IRequest<Result>;
+    bool IsActive,
+    string? RowVersion) : IRequest<Result>;
 
 public sealed class UpdateProductCommandValidator : AbstractValidator<UpdateProductCommand>
 {
@@ -37,8 +38,16 @@ public sealed class UpdateProductCommandValidator : AbstractValidator<UpdateProd
 public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand, Result>
 {
     private readonly IApplicationDbContext _db;
+    private readonly IRealtimeNotifier _notifications;
+    private readonly ICurrentUserService _currentUser;
 
-    public UpdateProductCommandHandler(IApplicationDbContext db) => _db = db;
+    public UpdateProductCommandHandler(
+        IApplicationDbContext db, IRealtimeNotifier notifications, ICurrentUserService currentUser)
+    {
+        _db = db;
+        _notifications = notifications;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result> Handle(UpdateProductCommand request, CancellationToken ct)
     {
@@ -53,6 +62,11 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
         if (!await _db.Taxes.AnyAsync(t => t.Id == request.TaxId, ct))
             return Result.Failure(Error.Validation("Tax does not exist."));
 
+        // See UpdateCustomerCommandHandler for why: this makes a save against a stale copy of
+        // the product fail loudly instead of silently overwriting someone else's edit.
+        _db.Entry(product).Property(p => p.RowVersion).OriginalValue =
+            string.IsNullOrEmpty(request.RowVersion) ? null : Convert.FromBase64String(request.RowVersion);
+
         product.Name = request.Name;
         product.Description = request.Description;
         product.Barcode = request.Barcode;
@@ -63,7 +77,21 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
         product.SellingPrice = request.SellingPrice;
         product.IsActive = request.IsActive;
 
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result.Failure(Error.Conflict(
+                "This product was changed by someone else since you loaded it. Reload and try again."));
+        }
+
+        await _notifications.PublishToAllAsync(
+            new NotificationMessage(
+                "Product updated", $"{product.Name} was updated by {_currentUser.Email ?? "another user"}.",
+                EntityType: "Product", EntityId: product.Id), ct);
+
         return Result.Success();
     }
 }

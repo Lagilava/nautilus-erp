@@ -40,13 +40,26 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       .configureLogging(LogLevel.Warning)
       .build();
 
-    connection.on('notification', (payload: { title: string; message: string; level: string }) => {
-      setItems((prev) => [
-        { id: Date.now() + Math.random(), at: new Date(), ...payload },
-        ...prev,
-      ].slice(0, 30));
-      setUnread((u) => u + 1);
-    });
+    connection.on(
+      'notification',
+      (payload: { title: string; message: string; level: string; entityType?: string; entityId?: string }) => {
+        setItems((prev) => [
+          { id: Date.now() + Math.random(), at: new Date(), ...payload },
+          ...prev,
+        ].slice(0, 30));
+        setUnread((u) => u + 1);
+
+        // Let any page showing this entity refetch it instead of going stale until reload —
+        // mirrors the erp:unauthorized pattern in AuthContext rather than adding a new store.
+        if (payload.entityType) {
+          window.dispatchEvent(
+            new CustomEvent('erp:entity-updated', {
+              detail: { entityType: payload.entityType, entityId: payload.entityId },
+            }),
+          );
+        }
+      },
+    );
 
     connection.start().catch(() => {
       /* hub unavailable — notifications are non-critical */

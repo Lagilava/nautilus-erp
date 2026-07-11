@@ -1,7 +1,13 @@
 namespace ERP.Application.Common.Interfaces;
 
-/// <summary>A real-time notification pushed to connected clients.</summary>
-public sealed record NotificationMessage(string Title, string Message, string Level = "info");
+/// <summary>
+/// A real-time notification pushed to connected clients. EntityType/EntityId are optional —
+/// set them so a client currently viewing that record can refetch it instead of just
+/// displaying the toast.
+/// </summary>
+public sealed record NotificationMessage(
+    string Title, string Message, string Level = "info",
+    string? EntityType = null, Guid? EntityId = null);
 
 /// <summary>An email to be sent (asynchronously, via the queue).</summary>
 public sealed record EmailMessage(string To, string Subject, string Body);

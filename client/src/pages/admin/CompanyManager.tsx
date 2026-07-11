@@ -14,6 +14,7 @@ interface Company {
   phone?: string | null;
   email?: string | null;
   baseCurrency: string;
+  rowVersion?: string | null;
 }
 
 // The business's own identity — the seller name + FRCS TIN printed on every tax invoice.
@@ -22,6 +23,7 @@ export function CompanyManager() {
   const toast = useToast();
   const [form, setForm] = useState<Company | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['company'],
@@ -32,13 +34,28 @@ export function CompanyManager() {
     if (data) setForm(data);
   }, [data]);
 
+  // Another administrator saved a change while this form was open — refetch instead of
+  // sitting on a stale copy.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ entityType: string }>).detail;
+      if (detail?.entityType === 'CompanyProfile') qc.invalidateQueries({ queryKey: ['company'] });
+    };
+    window.addEventListener('erp:entity-updated', handler);
+    return () => window.removeEventListener('erp:entity-updated', handler);
+  }, [qc]);
+
   const save = useMutation({
     mutationFn: () => api.put('/api/company', form),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['company'] });
       toast('Company profile saved.');
+      setConflict(false);
     },
-    onError: (e) => setError(apiErrorMessage(e)),
+    onError: (e) => {
+      if (apiErrorMessage(e).toLowerCase().includes('changed by someone else')) setConflict(true);
+      else setError(apiErrorMessage(e));
+    },
   });
 
   if (isLoading || !form) return <Loading />;
@@ -60,7 +77,11 @@ export function CompanyManager() {
       <p className="text-sm text-ink-muted">
         These details appear on tax invoices. A compliant Fiji tax invoice must show your legal name and FRCS TIN.
       </p>
-      {error && <ErrorNote message={error} />}
+      {conflict ? (
+        <ErrorNote message="The company profile was changed by someone else while this form was open. Reload the page to see their changes before editing." />
+      ) : (
+        error && <ErrorNote message={error} />
+      )}
       <div className="card space-y-4 p-5">
         <div className="grid grid-cols-2 gap-4">
           {field('legalName', 'Legal name')}
@@ -83,7 +104,11 @@ export function CompanyManager() {
           {field('email', 'Email', 'email')}
         </div>
         <div className="flex justify-end">
-          <button className="btn-primary" disabled={save.isPending || !form.legalName} onClick={() => save.mutate()}>
+          <button
+            className="btn-primary"
+            disabled={save.isPending || !form.legalName || conflict}
+            onClick={() => save.mutate()}
+          >
             {save.isPending ? <Spinner className="h-4 w-4 text-white" /> : 'Save changes'}
           </button>
         </div>

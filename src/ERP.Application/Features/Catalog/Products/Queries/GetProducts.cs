@@ -39,7 +39,8 @@ public sealed class GetProductsQueryHandler
                 p.CategoryId, p.Category!.Name,
                 p.UnitOfMeasureId, p.UnitOfMeasure!.Code,
                 p.TaxId, p.Tax!.Code,
-                p.CostPrice, p.SellingPrice, p.IsActive))
+                p.CostPrice, p.SellingPrice, p.IsActive,
+                p.RowVersion == null ? null : Convert.ToBase64String(p.RowVersion)))
             .ToListAsync(ct);
 
         return Result.Success(new PagedResult<ProductDto>(items, request.Page, request.PageSize, total));

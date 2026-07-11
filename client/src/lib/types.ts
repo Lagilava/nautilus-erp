@@ -68,6 +68,7 @@ export interface Product {
   costPrice: number;
   sellingPrice: number;
   isActive: boolean;
+  rowVersion?: string | null;
 }
 
 export interface Customer {
@@ -79,6 +80,8 @@ export interface Customer {
   taxIdentificationNumber?: string | null;
   creditLimit: number;
   isActive: boolean;
+  /** Concurrency token from the server; send back unchanged on update. */
+  rowVersion?: string | null;
 }
 
 export interface Category {

@@ -17,4 +17,11 @@ public sealed class CustomersController : ApiControllerBase
     [Authorize(Roles = $"{Roles.Administrator},{Roles.Manager}")]
     public async Task<IActionResult> Create(CreateCustomerCommand command, CancellationToken ct)
         => HandleResult(await Sender.Send(command, ct));
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = $"{Roles.Administrator},{Roles.Manager}")]
+    public async Task<IActionResult> Update(Guid id, UpdateCustomerCommand command, CancellationToken ct)
+        => id != command.Id
+            ? BadRequest("Route id and body id must match.")
+            : HandleResult(await Sender.Send(command, ct));
 }

@@ -133,7 +133,8 @@ public sealed class ApplicationDbContext
         // KNOWN LIMITATION: this means a Postgres deployment has no optimistic concurrency —
         // two users editing the same record last-write-wins instead of one getting a conflict.
         // The fix is Npgsql's system `xmin` column (UseXminAsConcurrencyToken), which needs a
-        // per-entity mapping rather than this blanket sweep.
+        // per-entity mapping AND a way to surface that token (not BaseEntity.RowVersion) through
+        // IApplicationDbContext/DTOs to callers — a wider change than the sweep below.
         if (Database.ProviderName != "Microsoft.EntityFrameworkCore.SqlServer")
         {
             foreach (var property in builder.Model.GetEntityTypes()

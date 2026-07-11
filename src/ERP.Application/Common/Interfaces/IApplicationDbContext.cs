@@ -8,6 +8,7 @@ using ERP.Domain.Purchasing;
 using ERP.Domain.Sales;
 using ERP.Domain.Taxation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace ERP.Application.Common.Interfaces;
 
@@ -63,4 +64,8 @@ public interface IApplicationDbContext
     DbSet<Attachment> Attachments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Exposes the change tracker entry for a loaded entity — needed to set an
+    /// original concurrency-token value before a conditional update.</summary>
+    EntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class;
 }

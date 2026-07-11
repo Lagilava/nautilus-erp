@@ -15,4 +15,5 @@ public sealed record ProductDto(
     string TaxCode,
     decimal CostPrice,
     decimal SellingPrice,
-    bool IsActive);
+    bool IsActive,
+    string? RowVersion);

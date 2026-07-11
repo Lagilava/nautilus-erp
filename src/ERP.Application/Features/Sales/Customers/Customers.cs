@@ -10,7 +10,7 @@ namespace ERP.Application.Features.Sales.Customers;
 
 public sealed record CustomerDto(
     Guid Id, string Code, string Name, string? Email, string? Phone,
-    string? TaxIdentificationNumber, decimal CreditLimit, bool IsActive);
+    string? TaxIdentificationNumber, decimal CreditLimit, bool IsActive, string? RowVersion);
 
 // ---- Create ----
 public sealed record CreateCustomerCommand(
@@ -81,9 +81,86 @@ public sealed class GetCustomersQueryHandler
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(c => new CustomerDto(
-                c.Id, c.Code, c.Name, c.Email, c.Phone, c.TaxIdentificationNumber, c.CreditLimit, c.IsActive))
+                c.Id, c.Code, c.Name, c.Email, c.Phone, c.TaxIdentificationNumber, c.CreditLimit, c.IsActive,
+                c.RowVersion == null ? null : Convert.ToBase64String(c.RowVersion)))
             .ToListAsync(ct);
 
         return Result.Success(new PagedResult<CustomerDto>(items, request.Page, request.PageSize, total));
+    }
+}
+
+// ---- Update ----
+/// <summary>
+/// <see cref="RowVersion"/> must be the base64 token the caller last read the customer with
+/// (<see cref="CustomerDto.RowVersion"/>). If another user saved a change in the meantime, the
+/// token no longer matches what's in the database and this fails with a conflict rather than
+/// silently overwriting their edit.
+/// </summary>
+public sealed record UpdateCustomerCommand(
+    Guid Id, string Name, string? Email, string? Phone,
+    string? AddressLine1, string? City, string? Country,
+    string? TaxIdentificationNumber, decimal CreditLimit, string? RowVersion) : IRequest<Result>;
+
+public sealed class UpdateCustomerCommandValidator : AbstractValidator<UpdateCustomerCommand>
+{
+    public UpdateCustomerCommandValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Email).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email));
+        RuleFor(x => x.CreditLimit).GreaterThanOrEqualTo(0);
+    }
+}
+
+public sealed class UpdateCustomerCommandHandler : IRequestHandler<UpdateCustomerCommand, Result>
+{
+    private readonly IApplicationDbContext _db;
+    private readonly IRealtimeNotifier _notifications;
+    private readonly ICurrentUserService _currentUser;
+
+    public UpdateCustomerCommandHandler(
+        IApplicationDbContext db, IRealtimeNotifier notifications, ICurrentUserService currentUser)
+    {
+        _db = db;
+        _notifications = notifications;
+        _currentUser = currentUser;
+    }
+
+    public async Task<Result> Handle(UpdateCustomerCommand request, CancellationToken ct)
+    {
+        var customer = await _db.Customers.FirstOrDefaultAsync(c => c.Id == request.Id, ct);
+        if (customer is null) return Result.Failure(Error.NotFound("Customer not found."));
+
+        // Tell EF what version we believe is still current. If a concurrent edit already moved
+        // it on, the UPDATE's WHERE clause matches zero rows and SaveChanges throws below —
+        // rather than the two edits silently clobbering one another.
+        var entry = _db.Entry(customer);
+        entry.Property(c => c.RowVersion).OriginalValue =
+            string.IsNullOrEmpty(request.RowVersion) ? null : Convert.FromBase64String(request.RowVersion);
+
+        customer.Name = request.Name;
+        customer.Email = request.Email;
+        customer.Phone = request.Phone;
+        customer.AddressLine1 = request.AddressLine1;
+        customer.City = request.City;
+        customer.Country = request.Country;
+        customer.TaxIdentificationNumber = request.TaxIdentificationNumber;
+        customer.CreditLimit = request.CreditLimit;
+
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result.Failure(Error.Conflict(
+                "This customer was changed by someone else since you loaded it. Reload and try again."));
+        }
+
+        await _notifications.PublishToAllAsync(
+            new NotificationMessage(
+                "Customer updated", $"{customer.Name} was updated by {_currentUser.Email ?? "another user"}.",
+                EntityType: "Customer", EntityId: customer.Id), ct);
+
+        return Result.Success();
     }
 }

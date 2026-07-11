@@ -12,6 +12,7 @@ interface AuthState {
   ready: boolean;
   isAuthenticated: boolean;
   hasRole: (...roles: string[]) => boolean;
+  refreshUser: () => Promise<void>;
   login: (email: string, password: string) => Promise<LoginOutcome>;
   verifyMfa: (challengeToken: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -93,11 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       isAuthenticated: !!user,
       hasRole: (...roles) => !!user && roles.some((r) => user.roles.includes(r)),
+      refreshUser: loadMe,
       login,
       verifyMfa,
       logout,
     }),
-    [user, ready, login, verifyMfa, logout],
+    [user, ready, loadMe, login, verifyMfa, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
