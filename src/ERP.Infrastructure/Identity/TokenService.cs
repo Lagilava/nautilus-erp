@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Models;
+using ERP.Shared.Results;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -14,6 +15,14 @@ public sealed class TokenService : ITokenService
 {
     /// <summary>Custom claim carrying the user's branch scope (absent = unrestricted).</summary>
     public const string BranchClaim = "branch";
+
+    // The MFA challenge token is a JWT with a distinct audience — never the API's own audience —
+    // so that even if it were presented as a bearer token, JwtBearer's ValidateAudience check
+    // (see DependencyInjection.AddJwtAuthentication) rejects it outright. It carries no role or
+    // name-identifier claims, only the subject, so it grants no API access on its own; it can
+    // only be redeemed via ValidateMfaChallengeToken.
+    private const string MfaChallengeAudience = "ERP.MfaChallenge";
+    private static readonly TimeSpan MfaChallengeLifetime = TimeSpan.FromMinutes(5);
 
     private readonly JwtSettings _settings;
     private readonly IDateTime _clock;
@@ -62,5 +71,60 @@ public sealed class TokenService : ITokenService
     {
         var bytes = RandomNumberGenerator.GetBytes(64);
         return Convert.ToBase64String(bytes);
+    }
+
+    public string CreateMfaChallengeToken(Guid userId)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SigningKey));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: _settings.Issuer,
+            audience: MfaChallengeAudience,
+            claims: new[] { new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()) },
+            notBefore: _clock.UtcNow.UtcDateTime,
+            expires: _clock.UtcNow.Add(MfaChallengeLifetime).UtcDateTime,
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public Result<Guid> ValidateMfaChallengeToken(string token)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SigningKey));
+        var parameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = _settings.Issuer,
+            ValidAudience = MfaChallengeAudience,
+            IssuerSigningKey = key,
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+
+        try
+        {
+            // MapInboundClaims defaults to true, which renames short claim names like "sub" to
+            // long legacy XML-namespace URIs (ClaimTypes.NameIdentifier). Disable it so the
+            // "sub" claim this token was written with comes back out as "sub".
+            var handler = new JwtSecurityTokenHandler { MapInboundClaims = false };
+            var principal = handler.ValidateToken(token, parameters, out _);
+            var sub = principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            return Guid.TryParse(sub, out var userId)
+                ? Result.Success(userId)
+                : Result.Failure<Guid>(Error.Unauthorized("Invalid or expired MFA challenge."));
+        }
+        catch (SecurityTokenException)
+        {
+            return Result.Failure<Guid>(Error.Unauthorized("Invalid or expired MFA challenge."));
+        }
+        catch (ArgumentException)
+        {
+            // Malformed input (e.g. not a well-formed JWT string) throws ArgumentException
+            // rather than a SecurityTokenException subtype.
+            return Result.Failure<Guid>(Error.Unauthorized("Invalid or expired MFA challenge."));
+        }
     }
 }

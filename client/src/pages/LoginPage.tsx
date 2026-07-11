@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,10 +16,13 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, verifyMfa } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
+  const [challengeToken, setChallengeToken] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
 
   const {
     register,
@@ -31,10 +35,28 @@ export function LoginPage() {
   const onSubmit = async (values: FormValues) => {
     setError(null);
     try {
-      await login(values.email, values.password);
+      const outcome = await login(values.email, values.password);
+      if (outcome.mfaRequired) {
+        setChallengeToken(outcome.challengeToken);
+        return;
+      }
       navigate(from, { replace: true });
     } catch (e) {
       setError(apiErrorMessage(e, 'Unable to sign in. Check your credentials.'));
+    }
+  };
+
+  const onVerifyMfa = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setVerifying(true);
+    try {
+      await verifyMfa(challengeToken!, code);
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(apiErrorMessage(err, 'Invalid or expired code.'));
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -73,46 +95,88 @@ export function LoginPage() {
           <div className="mb-8 lg:hidden">
             <BrandMark className="h-10 w-10" />
           </div>
-          <h2 className="text-2xl font-semibold text-ink">Sign in</h2>
-          <p className="mt-1 text-sm text-ink-muted">Welcome back. Enter your details to continue.</p>
+          {challengeToken ? (
+            <>
+              <h2 className="text-2xl font-semibold text-ink">Verification code</h2>
+              <p className="mt-1 text-sm text-ink-muted">
+                Enter the 6-digit code from your authenticator app, or a recovery code.
+              </p>
+              <form onSubmit={onVerifyMfa} className="mt-8 space-y-4">
+                {error && <ErrorNote message={error} />}
+                <div>
+                  <label className="field-label" htmlFor="code">
+                    Code
+                  </label>
+                  <input
+                    id="code"
+                    autoComplete="one-time-code"
+                    autoFocus
+                    className="input"
+                    placeholder="123456"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                  />
+                </div>
+                <button type="submit" className="btn-primary w-full" disabled={verifying || !code}>
+                  {verifying ? <Spinner className="h-4 w-4 text-white" /> : 'Verify'}
+                </button>
+                <button
+                  type="button"
+                  className="block w-full text-center text-sm text-ink-muted hover:text-ink"
+                  onClick={() => {
+                    setChallengeToken(null);
+                    setCode('');
+                    setError(null);
+                  }}
+                >
+                  Back to sign in
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-semibold text-ink">Sign in</h2>
+              <p className="mt-1 text-sm text-ink-muted">Welcome back. Enter your details to continue.</p>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
-            {error && <ErrorNote message={error} />}
-            <div>
-              <label className="field-label" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="username"
-                className={`input ${errors.email ? 'input-error' : ''}`}
-                placeholder="you@company.fj"
-                {...register('email')}
-              />
-              {errors.email && <p className="mt-1 text-xs text-danger">{errors.email.message}</p>}
-            </div>
-            <div>
-              <label className="field-label" htmlFor="password">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                className={`input ${errors.password ? 'input-error' : ''}`}
-                placeholder="••••••••"
-                {...register('password')}
-              />
-              {errors.password && <p className="mt-1 text-xs text-danger">{errors.password.message}</p>}
-            </div>
-            <button type="submit" className="btn-primary w-full" disabled={isSubmitting}>
-              {isSubmitting ? <Spinner className="h-4 w-4 text-white" /> : 'Sign in'}
-            </button>
-            <Link to="/forgot-password" className="block text-center text-sm text-ink-muted hover:text-ink">
-              Forgot your password?
-            </Link>
-          </form>
+              <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
+                {error && <ErrorNote message={error} />}
+                <div>
+                  <label className="field-label" htmlFor="email">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    autoComplete="username"
+                    className={`input ${errors.email ? 'input-error' : ''}`}
+                    placeholder="you@company.fj"
+                    {...register('email')}
+                  />
+                  {errors.email && <p className="mt-1 text-xs text-danger">{errors.email.message}</p>}
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="password">
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    autoComplete="current-password"
+                    className={`input ${errors.password ? 'input-error' : ''}`}
+                    placeholder="••••••••"
+                    {...register('password')}
+                  />
+                  {errors.password && <p className="mt-1 text-xs text-danger">{errors.password.message}</p>}
+                </div>
+                <button type="submit" className="btn-primary w-full" disabled={isSubmitting}>
+                  {isSubmitting ? <Spinner className="h-4 w-4 text-white" /> : 'Sign in'}
+                </button>
+                <Link to="/forgot-password" className="block text-center text-sm text-ink-muted hover:text-ink">
+                  Forgot your password?
+                </Link>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </div>

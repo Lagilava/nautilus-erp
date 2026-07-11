@@ -10,4 +10,5 @@ public sealed record UserIdentity(
     string FirstName,
     string LastName,
     IReadOnlyList<string> Roles,
-    Guid? BranchId = null);
+    Guid? BranchId = null,
+    bool MfaEnabled = false);

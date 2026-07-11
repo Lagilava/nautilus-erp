@@ -13,21 +13,7 @@ public class DashboardAndReportsEndpointTests : IClassFixture<ErpWebApplicationF
 
     public DashboardAndReportsEndpointTests(ErpWebApplicationFactory factory) => _factory = factory;
 
-    private sealed record AuthResponse(string AccessToken);
-
-    private async Task<HttpClient> AdminClientAsync()
-    {
-        var client = _factory.CreateClient();
-        var login = await client.PostAsJsonAsync("/api/auth/login", new
-        {
-            email = ErpWebApplicationFactory.AdminEmail,
-            password = ErpWebApplicationFactory.AdminPassword
-        });
-        login.EnsureSuccessStatusCode();
-        var auth = await login.Content.ReadFromJsonAsync<AuthResponse>(Json);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
-        return client;
-    }
+    private async Task<HttpClient> AdminClientAsync() => await _factory.AdminClientAsync();
 
     private static async Task<Guid> IdAsync(HttpResponseMessage r)
     {

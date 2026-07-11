@@ -53,6 +53,33 @@ public interface IIdentityService
     Task<Result> ChangePasswordAsync(
         Guid userId, string currentPassword, string newPassword, CancellationToken cancellationToken = default);
 
+    // --- Multi-factor authentication (self-service) ---
+
+    /// <summary>
+    /// (Re)generates the caller's authenticator secret. Does not enable MFA — the caller must
+    /// prove possession of the authenticator with a valid code via <see cref="EnableMfaAsync"/>
+    /// first, so a mistaken setup can never lock the account out.
+    /// </summary>
+    Task<Result<MfaSetup>> BeginMfaSetupAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Confirms a pending authenticator setup with a code and turns MFA on. Returns one-time
+    /// recovery codes — shown to the user exactly once, since only their hash is retained.
+    /// </summary>
+    Task<Result<IReadOnlyList<string>>> EnableMfaAsync(
+        Guid userId, string code, CancellationToken cancellationToken = default);
+
+    /// <summary>Turns MFA off. Requires the current password, mirroring <see cref="ChangePasswordAsync"/>.</summary>
+    Task<Result> DisableMfaAsync(
+        Guid userId, string currentPassword, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Redeems a TOTP code or a one-time recovery code for the named user, completing the
+    /// second factor of login. Returns the user on success.
+    /// </summary>
+    Task<Result<UserIdentity>> VerifyMfaCodeAsync(
+        Guid userId, string code, CancellationToken cancellationToken = default);
+
     // --- Administration (Milestone: system administration) ---
 
     /// <summary>All user accounts with their roles and active state.</summary>

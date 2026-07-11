@@ -4,6 +4,7 @@ import { api, apiErrorMessage } from '../lib/api';
 import { PageHeader, ErrorNote, Spinner, StatusPill } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../auth/AuthContext';
+import type { MfaSetup } from '../lib/types';
 
 /**
  * Self-service account page. Deliberately cannot change email, roles, or branch — those are
@@ -53,6 +54,50 @@ export function ProfilePage() {
   });
 
   const pwValid = currentPassword && newPassword.length >= 8 && newPassword === confirmPassword;
+
+  // --- Multi-factor authentication ---
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [setup, setSetup] = useState<MfaSetup | null>(null);
+  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [disablePassword, setDisablePassword] = useState('');
+
+  useEffect(() => {
+    if (user) setMfaEnabled(user.mfaEnabled);
+  }, [user]);
+
+  const beginMfaSetup = useMutation({
+    mutationFn: () => api.post<MfaSetup>('/api/auth/mfa/setup'),
+    onSuccess: ({ data }) => {
+      setSetup(data);
+      setMfaCode('');
+      setMfaError(null);
+    },
+    onError: (e) => setMfaError(apiErrorMessage(e)),
+  });
+
+  const enableMfa = useMutation({
+    mutationFn: () => api.post<string[]>('/api/auth/mfa/enable', { code: mfaCode }),
+    onSuccess: ({ data }) => {
+      setRecoveryCodes(data);
+      setSetup(null);
+      setMfaEnabled(true);
+      setMfaError(null);
+    },
+    onError: (e) => setMfaError(apiErrorMessage(e, 'Invalid code.')),
+  });
+
+  const disableMfa = useMutation({
+    mutationFn: () => api.post('/api/auth/mfa/disable', { currentPassword: disablePassword }),
+    onSuccess: () => {
+      setMfaEnabled(false);
+      setDisablePassword('');
+      setMfaError(null);
+      toast('Two-factor authentication disabled.');
+    },
+    onError: (e) => setMfaError(apiErrorMessage(e)),
+  });
 
   return (
     <>
@@ -130,6 +175,107 @@ export function ProfilePage() {
               {changePassword.isPending ? <Spinner className="h-4 w-4 text-white" /> : 'Change password'}
             </button>
           </div>
+        </div>
+
+        <div className="card space-y-4 p-5 lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-ink">Two-factor authentication</h2>
+            <StatusPill label={mfaEnabled ? 'Enabled' : 'Disabled'} tone={mfaEnabled ? 'success' : 'neutral'} />
+          </div>
+          {mfaError && <ErrorNote message={mfaError} />}
+
+          {recoveryCodes ? (
+            <div className="space-y-3">
+              <p className="text-sm text-ink-muted">
+                Save these recovery codes somewhere safe. Each can be used once if you lose access to your
+                authenticator — they will not be shown again.
+              </p>
+              <div className="grid grid-cols-2 gap-2 rounded-md bg-canvas p-4 font-mono text-sm">
+                {recoveryCodes.map((c) => (
+                  <span key={c}>{c}</span>
+                ))}
+              </div>
+              <div className="flex justify-end">
+                <button className="btn-primary" onClick={() => setRecoveryCodes(null)}>
+                  Done
+                </button>
+              </div>
+            </div>
+          ) : setup ? (
+            <div className="space-y-3">
+              <p className="text-sm text-ink-muted">
+                Scan this key into your authenticator app (Google Authenticator, Authy, etc.), or enter it manually,
+                then confirm with the 6-digit code it generates.
+              </p>
+              <div>
+                <label className="field-label">Setup key</label>
+                <input className="input bg-canvas font-mono text-sm" value={setup.sharedKey} readOnly />
+              </div>
+              <div>
+                <label className="field-label">6-digit code</label>
+                <input
+                  className="input"
+                  placeholder="123456"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    setSetup(null);
+                    setMfaError(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn-primary"
+                  disabled={mfaCode.length !== 6 || enableMfa.isPending}
+                  onClick={() => enableMfa.mutate()}
+                >
+                  {enableMfa.isPending ? <Spinner className="h-4 w-4 text-white" /> : 'Confirm and enable'}
+                </button>
+              </div>
+            </div>
+          ) : mfaEnabled ? (
+            <div className="space-y-3">
+              <p className="text-sm text-ink-muted">
+                Enter your current password to turn two-factor authentication off.
+              </p>
+              <div>
+                <label className="field-label">Current password</label>
+                <input
+                  className="input"
+                  type="password"
+                  value={disablePassword}
+                  onChange={(e) => setDisablePassword(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  className="btn-secondary"
+                  disabled={!disablePassword || disableMfa.isPending}
+                  onClick={() => disableMfa.mutate()}
+                >
+                  {disableMfa.isPending ? <Spinner className="h-4 w-4 text-ink" /> : 'Disable two-factor authentication'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-ink-muted">
+                Add an authenticator app as a second step at sign-in, on top of your password.
+              </p>
+              <div className="flex justify-end">
+                <button className="btn-primary" disabled={beginMfaSetup.isPending} onClick={() => beginMfaSetup.mutate()}>
+                  {beginMfaSetup.isPending ? <Spinner className="h-4 w-4 text-white" /> : 'Set up two-factor authentication'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -2,14 +2,18 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import { api } from '../lib/api';
 import { tokenStore } from '../lib/tokenStore';
-import type { AuthResult, UserIdentity } from '../lib/types';
+import type { AuthResult, LoginResult, UserIdentity } from '../lib/types';
+
+/** Result of a login attempt: either it completed, or a second factor is still owed. */
+export type LoginOutcome = { mfaRequired: false } | { mfaRequired: true; challengeToken: string };
 
 interface AuthState {
   user: UserIdentity | null;
   ready: boolean;
   isAuthenticated: boolean;
   hasRole: (...roles: string[]) => boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<LoginOutcome>;
+  verifyMfa: (challengeToken: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -53,8 +57,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string) => {
-      const { data } = await api.post<AuthResult>('/api/auth/login', { email, password });
+    async (email: string, password: string): Promise<LoginOutcome> => {
+      const { data } = await api.post<LoginResult>('/api/auth/login', { email, password });
+      if (data.mfaRequired) return { mfaRequired: true, challengeToken: data.mfaChallengeToken! };
+      tokenStore.set(data.tokens!);
+      await loadMe();
+      return { mfaRequired: false };
+    },
+    [loadMe],
+  );
+
+  const verifyMfa = useCallback(
+    async (challengeToken: string, code: string) => {
+      const { data } = await api.post<AuthResult>('/api/auth/mfa/verify', { challengeToken, code });
       tokenStore.set(data);
       await loadMe();
     },
@@ -79,9 +94,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       hasRole: (...roles) => !!user && roles.some((r) => user.roles.includes(r)),
       login,
+      verifyMfa,
       logout,
     }),
-    [user, ready, login, logout],
+    [user, ready, login, verifyMfa, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

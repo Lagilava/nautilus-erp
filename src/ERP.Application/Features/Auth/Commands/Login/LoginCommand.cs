@@ -4,6 +4,10 @@ using MediatR;
 
 namespace ERP.Application.Features.Auth.Commands.Login;
 
-/// <summary>Authenticates by email + password, returning a token pair on success.</summary>
+/// <summary>
+/// Authenticates by email + password. Returns a token pair directly, or — when the account
+/// has MFA enabled — an <see cref="LoginResult.MfaChallengeToken"/> that must be redeemed via
+/// <c>VerifyMfaCommand</c> before tokens are issued.
+/// </summary>
 public sealed record LoginCommand(string Email, string Password)
-    : IRequest<Result<AuthenticationResult>>;
+    : IRequest<Result<LoginResult>>;

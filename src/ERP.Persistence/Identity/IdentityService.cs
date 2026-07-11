@@ -128,7 +128,8 @@ public sealed class IdentityService : IIdentityService
     {
         var roles = await _userManager.GetRolesAsync(user);
         return new UserIdentity(
-            user.Id, user.Email ?? string.Empty, user.FirstName, user.LastName, roles.ToArray(), user.BranchId);
+            user.Id, user.Email ?? string.Empty, user.FirstName, user.LastName, roles.ToArray(),
+            user.BranchId, user.TwoFactorEnabled);
     }
 
     public async Task<IReadOnlyList<UserAccount>> GetUsersAsync(CancellationToken cancellationToken = default)
@@ -191,6 +192,87 @@ public sealed class IdentityService : IIdentityService
             return Result.Failure(Error.Unauthorized("Current password is incorrect."));
 
         return Result.Success();
+    }
+
+    public async Task<Result<MfaSetup>> BeginMfaSetupAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null) return Result.Failure<MfaSetup>(Error.NotFound("User not found."));
+
+        // Resetting first discards any half-finished prior setup, so re-running this always
+        // starts clean rather than confirming a stale, possibly-leaked secret.
+        await _userManager.ResetAuthenticatorKeyAsync(user);
+        var unformattedKey = await _userManager.GetAuthenticatorKeyAsync(user)
+            ?? throw new InvalidOperationException("Authenticator key was not generated.");
+
+        var uri = BuildAuthenticatorUri(user.Email ?? user.Id.ToString(), unformattedKey);
+        return Result.Success(new MfaSetup(unformattedKey, uri));
+    }
+
+    public async Task<Result<IReadOnlyList<string>>> EnableMfaAsync(
+        Guid userId, string code, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null) return Result.Failure<IReadOnlyList<string>>(Error.NotFound("User not found."));
+
+        var isValid = await _userManager.VerifyTwoFactorTokenAsync(
+            user, TokenOptions.DefaultAuthenticatorProvider, code);
+        if (!isValid)
+            return Result.Failure<IReadOnlyList<string>>(Error.Unauthorized("Invalid authenticator code."));
+
+        await _userManager.SetTwoFactorEnabledAsync(user, true);
+
+        // Recovery codes are shown once here; only their hash is retained by Identity, so this
+        // is the caller's only chance to see them.
+        var codes = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 8);
+        return Result.Success<IReadOnlyList<string>>((codes ?? Enumerable.Empty<string>()).ToArray());
+    }
+
+    public async Task<Result> DisableMfaAsync(
+        Guid userId, string currentPassword, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null) return Result.Failure(Error.NotFound("User not found."));
+
+        // Disabling a security control needs the same proof of identity as changing the
+        // password does — a live session alone is not enough.
+        if (!await _userManager.CheckPasswordAsync(user, currentPassword))
+            return Result.Failure(Error.Unauthorized("Current password is incorrect."));
+
+        await _userManager.SetTwoFactorEnabledAsync(user, false);
+        // Invalidate the secret too, so a stale authenticator entry can't be re-enabled without
+        // a fresh BeginMfaSetupAsync/EnableMfaAsync round-trip.
+        await _userManager.ResetAuthenticatorKeyAsync(user);
+
+        return Result.Success();
+    }
+
+    public async Task<Result<UserIdentity>> VerifyMfaCodeAsync(
+        Guid userId, string code, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null || !user.TwoFactorEnabled)
+            return Result.Failure<UserIdentity>(Error.Unauthorized("Invalid authentication code."));
+
+        var validTotp = await _userManager.VerifyTwoFactorTokenAsync(
+            user, TokenOptions.DefaultAuthenticatorProvider, code);
+
+        if (!validTotp)
+        {
+            // Recovery codes are single-use; a successful redemption consumes it.
+            var recoveryResult = await _userManager.RedeemTwoFactorRecoveryCodeAsync(user, code);
+            if (!recoveryResult.Succeeded)
+                return Result.Failure<UserIdentity>(Error.Unauthorized("Invalid authentication code."));
+        }
+
+        return Result.Success(await ToUserIdentityAsync(user));
+    }
+
+    private static string BuildAuthenticatorUri(string email, string unformattedKey)
+    {
+        const string issuer = "Nautilus ERP";
+        return $"otpauth://totp/{Uri.EscapeDataString(issuer)}:{Uri.EscapeDataString(email)}" +
+               $"?secret={unformattedKey}&issuer={Uri.EscapeDataString(issuer)}&digits=6";
     }
 
     public async Task<Result> SetUserRolesAsync(

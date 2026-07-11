@@ -19,12 +19,25 @@ export interface AuthResult {
   refreshToken: string;
 }
 
+/** What POST /api/auth/login returns: either tokens directly, or an MFA challenge to redeem. */
+export interface LoginResult {
+  mfaRequired: boolean;
+  mfaChallengeToken?: string | null;
+  tokens?: AuthResult | null;
+}
+
 export interface UserIdentity {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
   roles: string[];
+  mfaEnabled: boolean;
+}
+
+export interface MfaSetup {
+  sharedKey: string;
+  authenticatorUri: string;
 }
 
 export interface Dashboard {

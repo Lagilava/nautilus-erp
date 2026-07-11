@@ -13,7 +13,8 @@ Base URL (dev): `https://localhost:<port>`
 - **CORS**: allowed SPA origins come from `Cors:AllowedOrigins` (default `http://localhost:5173`,
   `http://localhost:3000`); credentials are allowed so the SignalR hub can authenticate.
 - **Auth**: `POST /api/auth/login` returns `accessToken` (15 min) + `refreshToken` (rotated)
-  in the body; send `Authorization: Bearer <accessToken>`; refresh via `POST /api/auth/refresh`.
+  in the body, or an MFA challenge if the account has two-factor enabled (see below); send
+  `Authorization: Bearer <accessToken>`; refresh via `POST /api/auth/refresh`.
 
 ## Endpoints
 
@@ -44,7 +45,8 @@ There is **no public registration**. Accounts are created by an administrator vi
 
 | Method | Route | Auth | Body | Success |
 |--------|-------|------|------|---------|
-| POST | `/api/auth/login` | anon | `{ email, password }` | 200 `AuthenticationResult` |
+| POST | `/api/auth/login` | anon | `{ email, password }` | 200 `LoginResult` |
+| POST | `/api/auth/mfa/verify` | anon | `{ challengeToken, code }` | 200 `AuthenticationResult` |
 | POST | `/api/auth/refresh` | anon | `{ refreshToken }` | 200 `AuthenticationResult` |
 | POST | `/api/auth/logout` | bearer | `{ refreshToken }` | 204 |
 | POST | `/api/auth/forgot-password` | anon | `{ email }` | 204 always — emails the link, never reveals whether the account exists |
@@ -52,8 +54,20 @@ There is **no public registration**. Accounts are created by an administrator vi
 | GET  | `/api/auth/me` | bearer | — | 200 `UserIdentity` |
 | PUT  | `/api/auth/me` | bearer | `{ firstName, lastName }` | 204 |
 | POST | `/api/auth/change-password` | bearer | `{ currentPassword, newPassword }` | 204 |
+| POST | `/api/auth/mfa/setup` | bearer | — | 200 `MfaSetup` — (re)generates an authenticator secret, not yet active |
+| POST | `/api/auth/mfa/enable` | bearer | `{ code }` | 200 `string[]` — confirms setup, turns MFA on, returns one-time recovery codes |
+| POST | `/api/auth/mfa/disable` | bearer | `{ currentPassword }` | 204 |
 
 `AuthenticationResult`: `{ userId, email, roles[], accessToken, accessTokenExpiresAt, refreshToken }`.
+
+`LoginResult`: `{ mfaRequired, mfaChallengeToken, tokens }` — when `mfaRequired` is false, `tokens`
+is an `AuthenticationResult` and `mfaChallengeToken` is null; when true, `tokens` is null and
+`mfaChallengeToken` must be redeemed via `POST /api/auth/mfa/verify` (TOTP or a recovery code)
+to receive tokens. The challenge token is a signed, 5-minute-lived JWT scoped to a distinct
+audience — it cannot be used as a bearer token against any other endpoint.
+
+`MfaSetup`: `{ sharedKey, authenticatorUri }` — `sharedKey` is the raw Base32 secret for manual
+entry; `authenticatorUri` is the `otpauth://` URI an authenticator app QR-scans.
 
 **Failure mapping** (`Result.Error.Code` → HTTP): `validation`→400, `unauthorized`→401,
 `locked_out`→423, `conflict`→409, `not_found`→404. FluentValidation failures return 400

@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -17,22 +16,7 @@ public class ReferenceDataEndpointTests : IClassFixture<ErpWebApplicationFactory
 
     public ReferenceDataEndpointTests(ErpWebApplicationFactory factory) => _factory = factory;
 
-    private sealed record AuthResponse(string AccessToken);
-    private sealed record CreatedId(Guid value);
-
-    private async Task<HttpClient> AdminClientAsync()
-    {
-        var client = _factory.CreateClient();
-        var login = await client.PostAsJsonAsync("/api/auth/login", new
-        {
-            email = ErpWebApplicationFactory.AdminEmail,
-            password = ErpWebApplicationFactory.AdminPassword
-        });
-        login.EnsureSuccessStatusCode();
-        var auth = await login.Content.ReadFromJsonAsync<AuthResponse>(Json);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
-        return client;
-    }
+    private async Task<HttpClient> AdminClientAsync() => await _factory.AdminClientAsync();
 
     private static async Task<Guid> CreatedIdAsync(HttpResponseMessage response)
     {

@@ -14,6 +14,8 @@ public static class TestAuth
 
     public sealed record AuthResponse(string AccessToken, string RefreshToken);
 
+    private sealed record LoginResponse(bool MfaRequired, string? MfaChallengeToken, AuthResponse? Tokens);
+
     public static async Task<HttpClient> AdminClientAsync(this ErpWebApplicationFactory factory)
     {
         var client = factory.CreateClient();
@@ -53,8 +55,9 @@ public static class TestAuth
     {
         var login = await client.PostAsJsonAsync("/api/auth/login", new { email, password });
         login.EnsureSuccessStatusCode();
-        var auth = await login.Content.ReadFromJsonAsync<AuthResponse>(Json);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+        var result = await login.Content.ReadFromJsonAsync<LoginResponse>(Json);
+        var auth = result!.Tokens ?? throw new InvalidOperationException("Login unexpectedly required MFA.");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
         return auth;
     }
 }
