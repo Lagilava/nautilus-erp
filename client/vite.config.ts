@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 // `dotnet run` uses the default http profile (http://localhost:5126). Proxy /api and /hubs
@@ -14,5 +14,11 @@ export default defineConfig({
       '/api': { target: API_TARGET, changeOrigin: true, secure: false },
       '/hubs': { target: API_TARGET, changeOrigin: true, secure: false, ws: true },
     },
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    globals: true,
+    css: false,
   },
 });
