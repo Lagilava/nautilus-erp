@@ -35,4 +35,36 @@ public sealed class ReportsController : ApiControllerBase
         var file = _exporter.Export(result.Value, format);
         return File(file.Content, file.ContentType, file.FileName);
     }
+
+    [HttpGet("receivables-aging")]
+    public async Task<IActionResult> ReceivablesAging(
+        [FromQuery] ReportFormat format = ReportFormat.Csv, CancellationToken ct = default)
+    {
+        var result = await Sender.Send(new GetReceivablesAgingReportQuery(), ct);
+        if (result.IsFailure) return HandleResult(result);
+
+        var file = _exporter.Export(result.Value, format);
+        return File(file.Content, file.ContentType, file.FileName);
+    }
+
+    /// <summary>The receivables-aging table as JSON, for on-screen display.</summary>
+    [HttpGet("receivables-aging/data")]
+    public async Task<IActionResult> ReceivablesAgingData(CancellationToken ct)
+        => HandleResult(await Sender.Send(new GetReceivablesAgingReportQuery(), ct));
+
+    [HttpGet("payables-aging")]
+    public async Task<IActionResult> PayablesAging(
+        [FromQuery] ReportFormat format = ReportFormat.Csv, CancellationToken ct = default)
+    {
+        var result = await Sender.Send(new GetPayablesAgingReportQuery(), ct);
+        if (result.IsFailure) return HandleResult(result);
+
+        var file = _exporter.Export(result.Value, format);
+        return File(file.Content, file.ContentType, file.FileName);
+    }
+
+    /// <summary>The payables-aging table as JSON, for on-screen display.</summary>
+    [HttpGet("payables-aging/data")]
+    public async Task<IActionResult> PayablesAgingData(CancellationToken ct)
+        => HandleResult(await Sender.Send(new GetPayablesAgingReportQuery(), ct));
 }

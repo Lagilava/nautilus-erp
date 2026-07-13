@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, ClipboardList } from 'lucide-react';
 import { api, apiErrorMessage } from '../../lib/api';
 import type { Paged, PurchaseOrderSummary } from '../../lib/types';
 import { fmtMoney, fmtDate } from '../../lib/format';
@@ -36,6 +36,8 @@ export function PurchaseOrdersPage() {
   return (
     <>
       <PageHeader
+        icon={ClipboardList}
+        eyebrow="Purchasing"
         title="Purchase Orders"
         subtitle="Order from suppliers, then receive goods into stock."
         actions={

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, ShoppingCart } from 'lucide-react';
 import { api, apiErrorMessage } from '../../lib/api';
 import type { Paged, SalesOrderSummary } from '../../lib/types';
 import { fmtMoney, fmtDate } from '../../lib/format';
@@ -36,6 +36,8 @@ export function SalesOrdersPage() {
   return (
     <>
       <PageHeader
+        icon={ShoppingCart}
+        eyebrow="Sales"
         title="Sales Orders"
         subtitle="From order to fulfilment — confirm, then issue stock to the customer."
         actions={

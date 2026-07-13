@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { UserCircle } from 'lucide-react';
 import { api, apiErrorMessage } from '../lib/api';
 import { PageHeader, ErrorNote, Spinner, StatusPill } from '../components/ui';
 import { useToast } from '../components/Toast';
@@ -102,7 +103,12 @@ export function ProfilePage() {
 
   return (
     <>
-      <PageHeader title="My profile" subtitle="Update your details and password." />
+      <PageHeader
+        icon={UserCircle}
+        eyebrow="Account"
+        title="My profile"
+        subtitle="Update your details and password."
+      />
 
       <div className="grid max-w-4xl grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="card space-y-4 p-5">

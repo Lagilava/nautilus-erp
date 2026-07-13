@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, XCircle, Plus } from 'lucide-react';
+import { CheckCircle2, XCircle, Plus, ReceiptText } from 'lucide-react';
 import { api, apiErrorMessage } from '../../lib/api';
 import type { SupplierInvoiceDetail, PaymentMethod } from '../../lib/types';
 import { fmtMoney, fmtDate } from '../../lib/format';
@@ -43,6 +43,7 @@ export function SupplierInvoiceDetailPage() {
 
   return (
     <DetailScaffold
+      icon={ReceiptText}
       backTo="/supplier-invoices"
       backLabel="Supplier Invoices"
       title={inv.number}

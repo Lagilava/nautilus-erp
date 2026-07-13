@@ -25,7 +25,8 @@ import { api, apiErrorMessage } from '../lib/api';
 import type { Dashboard, Paged, InvoiceSummary } from '../lib/types';
 import { fmtMoney, fmtNumber } from '../lib/format';
 import { statusTone, humanize } from '../lib/status';
-import { PageHeader, Loading, ErrorNote, StatusPill } from '../components/ui';
+import { Loading, ErrorNote, StatusPill } from '../components/ui';
+import { BrandMark, WaveMotif } from '../components/Brand';
 import { useAuth } from '../auth/AuthContext';
 
 interface AuditEntry {
@@ -44,7 +45,7 @@ interface TrendPoint {
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="card p-5">
+    <div className="card card-hover p-5">
       <p className="text-xs font-medium uppercase tracking-wider text-ink-muted">{label}</p>
       <p className="mt-2 font-display text-3xl font-semibold tabular text-ink">{value}</p>
       {hint && <p className="mt-1 text-xs text-ink-muted">{hint}</p>}
@@ -85,26 +86,43 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader
-        title={`Welcome back, ${user?.firstName ?? ''}`.trim()}
-        subtitle={
-          isAdmin
-            ? 'You have full administrative access. Here is where the business stands today.'
-            : 'A snapshot of your business today.'
-        }
-        actions={
-          isAdmin && (
+      {/* Branded hero — the calm Fiji-lagoon note, echoing the sign-in panel. */}
+      <div className="relative mb-6 overflow-hidden rounded-2xl bg-brand-gradient px-6 py-7 shadow-lift sm:px-8">
+        <WaveMotif className="text-[#2C63AB]/30" />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="hidden h-14 w-14 items-center justify-center rounded-xl bg-white/95 shadow-sm sm:flex">
+              <BrandMark className="h-9 w-9" />
+            </div>
+            <div>
+              <h1 className="font-display text-2xl font-semibold text-white sm:text-3xl">
+                {`Welcome back, ${user?.firstName ?? ''}`.trim()}
+              </h1>
+              <p className="mt-1 max-w-xl text-sm text-lagoon-100">
+                {isAdmin
+                  ? 'You have full administrative access. Here is where the business stands today.'
+                  : 'A snapshot of your business today.'}
+              </p>
+            </div>
+          </div>
+          {isAdmin && (
             <div className="hidden items-center gap-2 sm:flex">
-              <Link to="/sales-orders" className="btn-secondary">
+              <Link
+                to="/sales-orders"
+                className="inline-flex items-center gap-2 rounded-md bg-white/95 px-4 py-2 text-sm font-medium text-lagoon-700 transition-colors hover:bg-white"
+              >
                 <Plus className="h-4 w-4" /> Sales order
               </Link>
-              <Link to="/admin/users" className="btn-secondary">
+              <Link
+                to="/admin/users"
+                className="inline-flex items-center gap-2 rounded-md border border-white/40 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+              >
                 <UserPlus className="h-4 w-4" /> Add user
               </Link>
             </div>
-          )
-        }
-      />
+          )}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Sales this month" value={fmtMoney(data.salesThisMonth)} />

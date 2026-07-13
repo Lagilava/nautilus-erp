@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Search, Pencil } from 'lucide-react';
+import { Plus, Search, Pencil, Package } from 'lucide-react';
 import { api, apiErrorMessage } from '../lib/api';
 import type { Paged, Product, Category, UnitOfMeasure, Tax } from '../lib/types';
 import { fmtMoney } from '../lib/format';
@@ -45,6 +45,8 @@ export function ProductsPage() {
   return (
     <>
       <PageHeader
+        icon={Package}
+        eyebrow="Catalog"
         title="Products"
         subtitle="Your item master — the shared vocabulary for sales, purchasing, and inventory."
         actions={

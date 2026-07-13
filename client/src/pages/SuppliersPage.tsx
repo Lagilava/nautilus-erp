@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Truck } from 'lucide-react';
 import { api, apiErrorMessage } from '../lib/api';
 import type { Paged } from '../lib/types';
 import { PageHeader, TableSkeleton, EmptyState, ErrorNote, StatusPill, Spinner } from '../components/ui';
@@ -39,6 +39,8 @@ export function SuppliersPage() {
   return (
     <>
       <PageHeader
+        icon={Truck}
+        eyebrow="Purchasing"
         title="Suppliers"
         subtitle="The parties you buy from."
         actions={

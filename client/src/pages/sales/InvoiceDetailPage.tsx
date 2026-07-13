@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, Ban, Plus, Download } from 'lucide-react';
+import { Send, Ban, Plus, Download, FileText } from 'lucide-react';
 import { api, apiErrorMessage } from '../../lib/api';
 import { downloadFile } from '../../lib/download';
 import type { InvoiceDetail, PaymentRecord, PaymentMethod } from '../../lib/types';
@@ -50,6 +50,7 @@ export function InvoiceDetailPage() {
 
   return (
     <DetailScaffold
+      icon={FileText}
       backTo="/invoices"
       backLabel="Invoices"
       title={inv.number}

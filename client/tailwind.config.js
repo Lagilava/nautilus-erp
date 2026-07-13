@@ -25,6 +25,20 @@ export default {
           800: '#083A34',
           900: '#062B27',
         },
+        // Azure — the ocean-blue drawn straight from the Nautilus mark, used for
+        // gradients and accents that echo the shell-and-wave logo.
+        azure: {
+          50: '#EEF4FB',
+          100: '#D8E6F5',
+          200: '#B0CCEA',
+          300: '#7FA9DA',
+          400: '#4A82C4',
+          500: '#2C63AB', // logo mid-blue
+          600: '#1E4A8A',
+          700: '#173A6E',
+          800: '#12305C',
+          900: '#0E2547', // logo deep navy
+        },
         // Sand-gold — used sparingly for emphasis.
         sand: {
           100: '#F5ECD8',

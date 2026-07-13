@@ -34,6 +34,11 @@ public sealed class PurchaseOrdersController : ApiControllerBase
     public async Task<IActionResult> Create(CreatePurchaseOrderCommand command, CancellationToken ct)
         => HandleResult(await Sender.Send(command, ct));
 
+    [HttpPost("reorder-draft")]
+    [Authorize(Roles = Writers)]
+    public async Task<IActionResult> CreateReorderDraft(CreateReorderDraftCommand command, CancellationToken ct)
+        => HandleResult(await Sender.Send(command, ct));
+
     [HttpPost("{id:guid}/confirm")]
     [Authorize(Roles = Writers)]
     public async Task<IActionResult> Confirm(Guid id, CancellationToken ct)

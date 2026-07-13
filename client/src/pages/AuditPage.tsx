@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { ScrollText } from 'lucide-react';
 import { api, apiErrorMessage } from '../lib/api';
 import type { Paged } from '../lib/types';
 import { PageHeader, Loading, EmptyState, ErrorNote, StatusPill } from '../components/ui';
@@ -27,7 +28,12 @@ export function AuditPage() {
 
   return (
     <>
-      <PageHeader title="Audit Trail" subtitle="Every change to business data — who, what, and when." />
+      <PageHeader
+        icon={ScrollText}
+        eyebrow="Insights"
+        title="Audit Trail"
+        subtitle="Every change to business data — who, what, and when."
+      />
       <div className="card overflow-hidden">
         {isLoading ? (
           <Loading />

@@ -14,7 +14,9 @@ api.interceptors.request.use((config) => {
 // --- Silent refresh on 401, with a single in-flight refresh shared by concurrent requests ---
 let refreshing: Promise<string | null> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+async function redeemRefreshToken(): Promise<string | null> {
+  // Re-read at call time (not passed in): if another tab already rotated the token while
+  // we were waiting for the cross-tab lock below, we must present the *current* one.
   const refreshToken = tokenStore.refreshToken;
   if (!refreshToken) return null;
   try {
@@ -25,6 +27,20 @@ async function refreshAccessToken(): Promise<string | null> {
     tokenStore.clear();
     return null;
   }
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  // Refresh tokens are single-use and rotate server-side (see RefreshTokenCommandHandler):
+  // presenting an already-rotated token is treated as a theft signal and revokes the whole
+  // session chain. Two browser tabs open to the app can otherwise both redeem the same
+  // token at once. The Web Locks API serialises refreshes across tabs of this origin, so a
+  // tab that loses the race simply waits its turn and then redeems the now-current token
+  // instead of the stale one. Where Web Locks isn't available (older browsers), we fall
+  // back to an unprotected refresh — the pre-existing behaviour.
+  if (typeof navigator !== 'undefined' && navigator.locks) {
+    return navigator.locks.request('nautilus-erp:refresh-token', redeemRefreshToken);
+  }
+  return redeemRefreshToken();
 }
 
 api.interceptors.response.use(

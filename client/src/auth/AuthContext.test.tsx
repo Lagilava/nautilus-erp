@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -65,6 +66,29 @@ describe('AuthProvider', () => {
     expect(api.get).toHaveBeenCalledWith('/api/auth/me');
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.user?.email).toBe('staff@erp.local');
+  });
+
+  it('only makes one silent re-authentication call under StrictMode double-invoked effects', async () => {
+    // React 18 StrictMode deliberately mounts, cleans up, and remounts each component in
+    // development to surface effect bugs. Without the dedupe guard in AuthContext, that
+    // fires two concurrent GET /api/auth/me calls on boot, which can race to redeem the
+    // same single-use refresh token and get the whole session revoked (see the comment in
+    // AuthContext.tsx). This regression test locks in the fix: exactly one call, always.
+    tokenStore.refreshToken = 'stored-refresh-token';
+    vi.mocked(api.get).mockResolvedValueOnce({ data: user });
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <StrictMode>
+          <AuthProvider>{children}</AuthProvider>
+        </StrictMode>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(api.get).toHaveBeenCalledTimes(1);
+    expect(result.current.isAuthenticated).toBe(true);
   });
 
   it('clears the stored token when silent re-authentication fails', async () => {

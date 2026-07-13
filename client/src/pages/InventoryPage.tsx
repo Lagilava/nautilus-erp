@@ -1,14 +1,133 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ClipboardList, Boxes } from 'lucide-react';
 import { api, apiErrorMessage } from '../lib/api';
 import type { Paged, StockLevel } from '../lib/types';
 import { fmtMoney, fmtNumber } from '../lib/format';
-import { PageHeader, Loading, EmptyState, ErrorNote, StatusPill } from '../components/ui';
+import { useSuppliers, useWarehouses } from '../lib/pickers';
+import { useAuth } from '../auth/AuthContext';
+import { PageHeader, Loading, EmptyState, ErrorNote, StatusPill, Spinner } from '../components/ui';
 import { Pagination } from '../components/Pagination';
+import { Modal } from '../components/Modal';
+import { useToast } from '../components/Toast';
+
+interface ReorderDraftResult {
+  purchaseOrderId: string;
+  number: string;
+  lineCount: number;
+}
+
+/**
+ * One-click replenishment: pick a supplier and warehouse, and the server drafts a purchase
+ * order covering everything at or below its reorder level. The draft opens for review.
+ */
+function ReorderModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const toast = useToast();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const suppliers = useSuppliers();
+  const warehouses = useWarehouses();
+  const [supplierId, setSupplierId] = useState('');
+  const [warehouseId, setWarehouseId] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: async () =>
+      (
+        await api.post<ReorderDraftResult>('/api/purchase-orders/reorder-draft', {
+          supplierId,
+          warehouseId,
+        })
+      ).data,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+      toast(`Draft ${result.number} created with ${result.lineCount} line${result.lineCount === 1 ? '' : 's'}.`);
+      onClose();
+      navigate(`/purchase-orders/${result.purchaseOrderId}`);
+    },
+    onError: (e) => setError(apiErrorMessage(e, 'Could not create the reorder draft.')),
+  });
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Create reorder PO"
+      footer={
+        <>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="btn-primary"
+            disabled={!supplierId || !warehouseId || mutation.isPending}
+            onClick={() => {
+              setError(null);
+              mutation.mutate();
+            }}
+          >
+            {mutation.isPending ? <Spinner className="h-4 w-4 text-white" /> : 'Create draft'}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {error && <ErrorNote message={error} />}
+        <p className="text-sm text-ink-muted">
+          Drafts a purchase order for every product in the warehouse at or below its reorder level,
+          topped up to twice that level. You review and confirm the draft before anything is ordered.
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="field-label" htmlFor="reorder-supplier">
+              Supplier
+            </label>
+            <select
+              id="reorder-supplier"
+              className="input"
+              value={supplierId}
+              onChange={(e) => setSupplierId(e.target.value)}
+            >
+              <option value="">Select…</option>
+              {suppliers.data?.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="field-label" htmlFor="reorder-warehouse">
+              Warehouse
+            </label>
+            <select
+              id="reorder-warehouse"
+              className="input"
+              value={warehouseId}
+              onChange={(e) => setWarehouseId(e.target.value)}
+            >
+              <option value="">Select…</option>
+              {warehouses.data?.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
 export function InventoryPage() {
+  const { hasRole } = useAuth();
   const [page, setPage] = useState(1);
   const [lowOnly, setLowOnly] = useState(false);
+  const [reorderOpen, setReorderOpen] = useState(false);
+
+  const canReorder = hasRole('Administrator') || hasRole('Manager');
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['stock-levels', page, lowOnly],
@@ -23,21 +142,31 @@ export function InventoryPage() {
   return (
     <>
       <PageHeader
+        icon={Boxes}
+        eyebrow="Catalog"
         title="Inventory"
         subtitle="Stock on hand and valuation across warehouses (FIFO costed)."
         actions={
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-soft">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-line text-lagoon-500 focus:ring-lagoon-400"
-              checked={lowOnly}
-              onChange={(e) => {
-                setLowOnly(e.target.checked);
-                setPage(1);
-              }}
-            />
-            Low stock only
-          </label>
+          <div className="flex items-center gap-4">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-soft">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-line text-lagoon-500 focus:ring-lagoon-400"
+                checked={lowOnly}
+                onChange={(e) => {
+                  setLowOnly(e.target.checked);
+                  setPage(1);
+                }}
+              />
+              Low stock only
+            </label>
+            {canReorder && (
+              <button className="btn-primary" onClick={() => setReorderOpen(true)}>
+                <ClipboardList className="h-4 w-4" />
+                Reorder low stock
+              </button>
+            )}
+          </div>
         }
       />
 
@@ -95,6 +224,8 @@ export function InventoryPage() {
           </div>
         )}
       </div>
+
+      {reorderOpen && <ReorderModal open={reorderOpen} onClose={() => setReorderOpen(false)} />}
     </>
   );
 }

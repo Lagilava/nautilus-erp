@@ -1,15 +1,30 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LogOut, Menu, X } from 'lucide-react';
+import { LogOut, Menu, Search, X } from 'lucide-react';
 import { Wordmark } from '../components/Brand';
 import { useAuth } from '../auth/AuthContext';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { ScrollToTop } from '../components/ScrollToTop';
+import { CommandPalette } from '../components/CommandPalette';
+import { AssistantWidget } from '../assistant/AssistantWidget';
 import { NAV } from './nav';
 
 export function AppLayout() {
   const { user, logout, hasRole } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Global Ctrl/Cmd+K opens the command palette from anywhere in the app.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const initials = (user?.firstName?.[0] ?? '') + (user?.lastName?.[0] ?? '');
 
@@ -79,8 +94,24 @@ export function AppLayout() {
           <button className="btn-ghost -ml-2 p-2 lg:hidden" onClick={() => setMobileOpen((o) => !o)}>
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <div className="hidden lg:block" />
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            className="hidden items-center gap-2 rounded-md border border-line px-3 py-1.5 text-sm text-ink-muted transition-colors hover:border-lagoon-300 hover:text-ink lg:flex"
+          >
+            <Search className="h-4 w-4" />
+            Search…
+            <kbd className="ml-4 rounded border border-line px-1.5 py-0.5 text-[10px] font-medium">Ctrl K</kbd>
+          </button>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              className="btn-ghost p-2 lg:hidden"
+              aria-label="Search"
+            >
+              <Search className="h-[18px] w-[18px]" />
+            </button>
             <NotificationBell />
             <div className="h-6 w-px bg-line" />
             <NavLink to="/profile" className="flex items-center gap-3 rounded-md px-2 py-1 hover:bg-lagoon-50/60" title="My profile">
@@ -103,6 +134,8 @@ export function AppLayout() {
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
           <Outlet />
         </main>
+        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+        <AssistantWidget />
       </div>
     </div>
   );

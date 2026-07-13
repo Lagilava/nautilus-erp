@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, UserCheck, UserX } from 'lucide-react';
+import { Plus, UserCheck, UserX, UserCog } from 'lucide-react';
 import { api, apiErrorMessage } from '../../lib/api';
 import type { UserAccount } from '../../lib/types';
 import { PageHeader, Loading, ErrorNote, StatusPill, Spinner } from '../../components/ui';
@@ -52,6 +52,8 @@ export function UsersPage() {
   return (
     <>
       <PageHeader
+        icon={UserCog}
+        eyebrow="Administration"
         title="Users"
         subtitle="Manage who can access the system and what they can do."
         actions={

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { FileText } from 'lucide-react';
 import { api, apiErrorMessage } from '../../lib/api';
 import type { Paged, InvoiceSummary } from '../../lib/types';
 import { fmtMoney, fmtDate } from '../../lib/format';
@@ -26,7 +27,12 @@ export function InvoicesPage() {
 
   return (
     <>
-      <PageHeader title="Invoices" subtitle="Issue tax invoices and record customer payments." />
+      <PageHeader
+        icon={FileText}
+        eyebrow="Sales"
+        title="Invoices"
+        subtitle="Issue tax invoices and record customer payments."
+      />
 
       <div className="card overflow-hidden">
         {isLoading ? (

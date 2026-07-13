@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Search, Pencil } from 'lucide-react';
+import { Plus, Search, Pencil, Users } from 'lucide-react';
 import { api, apiErrorMessage } from '../lib/api';
 import type { Paged, Customer } from '../lib/types';
 import { fmtMoney } from '../lib/format';
@@ -43,6 +43,8 @@ export function CustomersPage() {
   return (
     <>
       <PageHeader
+        icon={Users}
+        eyebrow="Sales"
         title="Customers"
         subtitle="The parties you sell to."
         actions={

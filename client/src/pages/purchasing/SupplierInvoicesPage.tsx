@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { ReceiptText } from 'lucide-react';
 import { api, apiErrorMessage } from '../../lib/api';
 import type { Paged, SupplierInvoiceSummary } from '../../lib/types';
 import { fmtMoney, fmtDate } from '../../lib/format';
@@ -26,7 +27,12 @@ export function SupplierInvoicesPage() {
 
   return (
     <>
-      <PageHeader title="Supplier Invoices" subtitle="Approve supplier bills and record payments (accounts payable)." />
+      <PageHeader
+        icon={ReceiptText}
+        eyebrow="Purchasing"
+        title="Supplier Invoices"
+        subtitle="Approve supplier bills and record payments (accounts payable)."
+      />
 
       <div className="card overflow-hidden">
         {isLoading ? (

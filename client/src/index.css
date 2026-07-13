@@ -9,6 +9,12 @@
   }
   body {
     @apply bg-canvas text-ink font-sans antialiased;
+    /* A whisper of ocean light — two soft tints anchored to the corners so the
+       warm-paper canvas reads less flat, echoing the logo's blue-green wash. */
+    background-image:
+      radial-gradient(60rem 60rem at 108% -10%, rgba(44, 99, 171, 0.06), transparent 60%),
+      radial-gradient(50rem 50rem at -10% 8%, rgba(14, 115, 103, 0.05), transparent 55%);
+    background-attachment: fixed;
   }
   h1, h2, h3 {
     @apply font-display tracking-tight;
@@ -22,26 +28,40 @@
 @layer components {
   /* Buttons */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium
-           transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-400
-           focus-visible:ring-offset-1 focus-visible:ring-offset-canvas disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium
+           transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-lagoon-400
+           focus-visible:ring-offset-1 focus-visible:ring-offset-canvas disabled:opacity-50 disabled:pointer-events-none
+           active:translate-y-px;
   }
   .btn-primary {
-    @apply btn bg-lagoon-500 text-white hover:bg-lagoon-600;
+    /* The signature ocean gradient, with a subtle lift on hover. */
+    @apply btn bg-brand-gradient-soft text-white shadow-sm hover:brightness-105 hover:shadow-raised;
   }
   .btn-secondary {
-    @apply btn bg-surface text-ink border border-line hover:bg-lagoon-50;
+    @apply btn bg-surface text-ink border border-line shadow-sm hover:border-lagoon-300 hover:bg-lagoon-50;
   }
   .btn-ghost {
-    @apply btn text-ink-soft hover:bg-lagoon-50;
+    @apply btn text-ink-soft hover:bg-lagoon-50 hover:text-ink;
   }
   .btn-danger {
-    @apply btn bg-danger text-white hover:opacity-90;
+    @apply btn bg-danger text-white shadow-sm hover:opacity-90;
   }
 
   /* Surfaces */
   .card {
-    @apply bg-surface border border-line rounded-lg shadow-card;
+    @apply bg-surface border border-line rounded-xl shadow-card;
+  }
+  /* Opt-in interactive card: gentle lift + accent border on hover. */
+  .card-hover {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:border-lagoon-200;
+  }
+  .card-hover:hover {
+    box-shadow: 0 10px 30px -12px rgba(14, 49, 43, 0.18);
+  }
+
+  /* A small gradient "chip" that houses an icon — the recurring brand accent. */
+  .icon-badge {
+    @apply inline-flex items-center justify-center rounded-xl bg-brand-gradient text-white shadow-sm;
   }
 
   /* Inputs */
@@ -49,8 +69,8 @@
     @apply block text-sm font-medium text-ink-soft mb-1.5;
   }
   .input {
-    @apply w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink
-           placeholder:text-ink-muted focus:outline-none focus:border-lagoon-400
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink shadow-sm
+           placeholder:text-ink-muted transition-colors focus:outline-none focus:border-lagoon-400
            focus:ring-2 focus:ring-lagoon-100;
   }
   .input-error {
@@ -64,6 +84,100 @@
 
   /* Status pills */
   .pill {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ring-black/5;
+  }
+}
+
+@layer utilities {
+  /* Brand gradients and depth defined as plain CSS so they never depend on a
+     Tailwind config reload (config changes require a dev-server restart). */
+  .bg-brand-gradient {
+    background-image: linear-gradient(135deg, #0B5A50 0%, #0E7367 45%, #2C63AB 100%);
+  }
+  .bg-brand-gradient-soft {
+    background-image: linear-gradient(135deg, #0E7367 0%, #1E4A8A 100%);
+  }
+  .shadow-lift {
+    box-shadow: 0 10px 30px -12px rgba(14, 49, 43, 0.18);
+  }
+  .shadow-glow {
+    box-shadow: 0 0 0 1px rgba(14, 115, 103, 0.08), 0 8px 24px -10px rgba(14, 115, 103, 0.25);
+  }
+
+  /* Reusable shimmer sweep for skeleton loaders. */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    animation: shimmer 1.6s infinite;
+  }
+
+  /* Micro-animations defined in CSS so they work without a config reload.
+     `both` fill-mode holds the 0% state during any animation-delay, so staggered
+     entrances don't flash at full opacity before their turn. */
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out both;
+  }
+  .animate-scale-in {
+    animation: scale-in 0.18s ease-out both;
+  }
+  /* A slow, gentle bob — for elements that should feel alive without being busy. */
+  .animate-float {
+    animation: brand-float 6s ease-in-out infinite;
+  }
+  /* A large, very slow drift — for blurred background accent shapes. */
+  .animate-drift {
+    animation: brand-drift 16s ease-in-out infinite;
+  }
+  .animate-drift-slow {
+    animation: brand-drift 22s ease-in-out infinite reverse;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes brand-float {
+  0%, 100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(-1deg);
+  }
+}
+@keyframes brand-drift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(24px, -28px) scale(1.08);
   }
 }

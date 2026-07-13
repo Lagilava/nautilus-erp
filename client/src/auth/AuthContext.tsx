@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { api } from '../lib/api';
 import { tokenStore } from '../lib/tokenStore';
@@ -30,9 +30,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // On boot, if a refresh token exists, silently re-authenticate and load the profile.
+  //
+  // Guarded by a ref (not just the `active` flag below) so the boot attempt only ever
+  // runs once. React 18 StrictMode deliberately double-invokes effects in development;
+  // without this guard that fires two concurrent `GET /api/auth/me` calls, both racing
+  // to redeem the same single-use refresh token. The server treats the loser's redemption
+  // as reuse of an already-rotated token — a theft signal — and revokes the whole session
+  // chain, forcing a real re-login on what should have been a silent refresh.
+  const bootOnce = useRef<Promise<void> | null>(null);
   useEffect(() => {
     let active = true;
-    (async () => {
+    bootOnce.current ??= (async () => {
       if (tokenStore.refreshToken) {
         try {
           await loadMe();
@@ -40,8 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tokenStore.clear();
         }
       }
-      if (active) setReady(true);
     })();
+    bootOnce.current.finally(() => {
+      if (active) setReady(true);
+    });
     return () => {
       active = false;
     };

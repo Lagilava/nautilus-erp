@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { SlidersHorizontal } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { Category, UnitOfMeasure, Warehouse } from '../../lib/types';
 import { PageHeader } from '../../components/ui';
@@ -31,7 +32,12 @@ export function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" subtitle="Configure the shared vocabulary your business runs on." />
+      <PageHeader
+        icon={SlidersHorizontal}
+        eyebrow="Administration"
+        title="Settings"
+        subtitle="Configure the shared vocabulary your business runs on."
+      />
 
       <div className="mb-5 flex flex-wrap gap-1 border-b border-line">
         {TABS.map((t) => (

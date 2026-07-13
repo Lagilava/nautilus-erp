@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, PackagePlus, XCircle, FileText } from 'lucide-react';
+import { CheckCircle2, PackagePlus, XCircle, FileText, ClipboardList } from 'lucide-react';
 import { api, apiErrorMessage } from '../../lib/api';
 import type { PurchaseOrderDetail } from '../../lib/types';
 import { fmtMoney, fmtDate } from '../../lib/format';
@@ -70,6 +70,7 @@ export function PurchaseOrderDetailPage() {
 
   return (
     <DetailScaffold
+      icon={ClipboardList}
       backTo="/purchase-orders"
       backLabel="Purchase Orders"
       title={order.number}

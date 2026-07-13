@@ -39,6 +39,7 @@ describe('LoginPage', () => {
       login,
       verifyMfa,
       logout: vi.fn(),
+      refreshUser: vi.fn(),
     });
   });
 

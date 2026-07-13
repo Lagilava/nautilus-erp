@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, PackageCheck, XCircle, FileText } from 'lucide-react';
+import { CheckCircle2, PackageCheck, XCircle, FileText, ShoppingCart } from 'lucide-react';
 import { api, apiErrorMessage } from '../../lib/api';
 import type { SalesOrderDetail } from '../../lib/types';
 import { fmtMoney, fmtDate } from '../../lib/format';
@@ -61,6 +61,7 @@ export function SalesOrderDetailPage() {
 
   return (
     <DetailScaffold
+      icon={ShoppingCart}
       backTo="/sales-orders"
       backLabel="Sales Orders"
       title={order.number}
