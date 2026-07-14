@@ -16,11 +16,16 @@
   <img alt="License" src="https://img.shields.io/badge/status-active--development-orange">
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Nautilus ERP dashboard" width="800"/>
+</p>
+
 ---
 
 ## Contents
 
 - [What this is](#what-this-is)
+- [Screenshots](#screenshots)
 - [Modules](#modules)
 - [Architecture](#architecture)
 - [Access control](#access-control)
@@ -44,6 +49,21 @@ business.
 The backend is a **Clean Architecture** .NET 9 solution (CQRS via MediatR); the frontend
 is a **React 19 + TypeScript** SPA (Vite, TanStack Query, Tailwind).
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/login.png" alt="Login page" width="800"/>
+  <br/><sub>Login</sub>
+</p>
+<p align="center">
+  <img src="docs/screenshots/inventory.png" alt="Inventory page" width="800"/>
+  <br/><sub>Inventory — FIFO-costed stock on hand, with one-click reorder</sub>
+</p>
+<p align="center">
+  <img src="docs/screenshots/reports.png" alt="Reports page" width="800"/>
+  <br/><sub>Reports — aging and valuation exports (CSV/Excel/PDF)</sub>
+</p>
+
 ## Modules
 
 | # | Module | Highlights |
@@ -58,6 +78,11 @@ is a **React 19 + TypeScript** SPA (Vite, TanStack Query, Tailwind).
 | M8 | Dashboard & reporting | KPIs, aging reports, CSV/Excel/PDF export |
 | M9 | Notifications | SignalR live updates + Hangfire email queue |
 | M10 | React SPA | Auth, dashboard, catalog, order-to-cash, procure-to-pay, admin, command palette, AI assistant |
+
+<p align="center">
+  <img src="docs/screenshots/command-palette.png" alt="Global command palette (Ctrl+K)" width="440"/>
+  <img src="docs/screenshots/ai-assistant.png" alt="AI assistant widget" width="440"/>
+</p>
 | M11 | Hardening | Rate limiting, response compression, security headers, DB health checks, Docker |
 
 ## Architecture
@@ -212,6 +237,10 @@ sequenceDiagram
     API-->>Approver: Ready for payment
 ```
 
+<p align="center">
+  <img src="docs/screenshots/purchase-orders.png" alt="Purchase orders list" width="800"/>
+</p>
+
 ### Order-to-cash
 
 ```mermaid
@@ -231,6 +260,10 @@ sequenceDiagram
     Staff->>API: Record Payment
     API-->>Staff: Invoice status = Paid
 ```
+
+<p align="center">
+  <img src="docs/screenshots/sales-orders.png" alt="Sales orders list" width="800"/>
+</p>
 
 ### Request lifecycle (SPA ⇄ API)
 
