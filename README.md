@@ -78,12 +78,12 @@ is a **React 19 + TypeScript** SPA (Vite, TanStack Query, Tailwind).
 | M8 | Dashboard & reporting | KPIs, aging reports, CSV/Excel/PDF export |
 | M9 | Notifications | SignalR live updates + Hangfire email queue |
 | M10 | React SPA | Auth, dashboard, catalog, order-to-cash, procure-to-pay, admin, command palette, AI assistant |
+| M11 | Hardening | Rate limiting, response compression, security headers, DB health checks, Docker |
 
 <p align="center">
   <img src="docs/screenshots/command-palette.png" alt="Global command palette (Ctrl+K)" width="440"/>
   <img src="docs/screenshots/ai-assistant.png" alt="AI assistant widget" width="440"/>
 </p>
-| M11 | Hardening | Rate limiting, response compression, security headers, DB health checks, Docker |
 
 ## Architecture
 
