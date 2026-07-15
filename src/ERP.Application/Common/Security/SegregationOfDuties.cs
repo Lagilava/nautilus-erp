@@ -32,6 +32,9 @@ public enum SoDRule
     /// back door out of the approval you were not allowed to grant yourself.
     /// </summary>
     SupplierInvoiceCancel,
+
+    /// <summary>You may not post a manual journal entry you prepared.</summary>
+    JournalEntryPosting,
 }
 
 /// <summary>

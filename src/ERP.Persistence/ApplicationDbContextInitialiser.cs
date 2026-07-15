@@ -1,3 +1,5 @@
+using ERP.Application.Common.Services;
+using ERP.Domain.Accounting;
 using ERP.Persistence.Identity;
 using ERP.Shared.Authorization;
 using Microsoft.Data.Sqlite;
@@ -77,6 +79,8 @@ public sealed class ApplicationDbContextInitialiser
             await _db.SaveChangesAsync();
         }
 
+        await SeedChartOfAccountsAsync();
+
         var adminEmail = _configuration["Seed:AdminEmail"];
         var adminPassword = _configuration["Seed:AdminPassword"];
 
@@ -106,6 +110,33 @@ public sealed class ApplicationDbContextInitialiser
         }
     }
 
+
+    /// <summary>
+    /// Seeds the system accounts every auto-posting handler relies on. Runs on every startup
+    /// (idempotent via the Code check), independent of the optional demo dataset, because
+    /// auto-posting must work even in a bare deployment with no demo data seeded.
+    /// </summary>
+    private async Task SeedChartOfAccountsAsync()
+    {
+        (string Code, string Name, AccountType Type)[] systemAccounts =
+        [
+            (GeneralLedgerAccountCodes.Cash, "Cash", AccountType.Asset),
+            (GeneralLedgerAccountCodes.AccountsReceivable, "Accounts Receivable", AccountType.Asset),
+            (GeneralLedgerAccountCodes.Inventory, "Inventory", AccountType.Asset),
+            (GeneralLedgerAccountCodes.AccountsPayable, "Accounts Payable", AccountType.Liability),
+            (GeneralLedgerAccountCodes.SalesTaxPayable, "Sales Tax Payable", AccountType.Liability),
+            (GeneralLedgerAccountCodes.SalesRevenue, "Sales Revenue", AccountType.Revenue),
+            (GeneralLedgerAccountCodes.CostOfGoodsSold, "Cost of Goods Sold", AccountType.Expense),
+        ];
+
+        var existingCodes = await _db.Accounts.Select(a => a.Code).ToListAsync();
+        foreach (var (code, name, type) in systemAccounts)
+        {
+            if (existingCodes.Contains(code)) continue;
+            _db.Accounts.Add(new Account { Code = code, Name = name, Type = type, IsSystem = true, IsActive = true });
+        }
+        await _db.SaveChangesAsync();
+    }
 
     private async Task<bool> IsSqliteSchemaIncompleteAsync()
     {

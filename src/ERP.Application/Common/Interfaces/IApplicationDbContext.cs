@@ -1,3 +1,4 @@
+using ERP.Domain.Accounting;
 using ERP.Domain.Auditing;
 using ERP.Domain.Catalog;
 using ERP.Domain.Documents;
@@ -62,6 +63,14 @@ public interface IApplicationDbContext
     DbSet<CompanyProfile> CompanyProfiles { get; }
 
     DbSet<Attachment> Attachments { get; }
+
+    // Accounting / General Ledger (Milestone 12).
+    DbSet<Account> Accounts { get; }
+    DbSet<JournalEntry> JournalEntries { get; }
+    DbSet<JournalLine> JournalLines { get; }
+    DbSet<AccountingPeriod> AccountingPeriods { get; }
+    DbSet<BankStatementLine> BankStatementLines { get; }
+    DbSet<Reconciliation> Reconciliations { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

@@ -1,4 +1,5 @@
 using ERP.Application.Common.Interfaces;
+using ERP.Application.Common.Services;
 using ERP.Domain.Common;
 using ERP.Domain.Sales;
 using ERP.Shared.Results;
@@ -32,7 +33,12 @@ public sealed class RecordPaymentCommandValidator : AbstractValidator<RecordPaym
 public sealed class RecordPaymentCommandHandler : IRequestHandler<RecordPaymentCommand, Result<Guid>>
 {
     private readonly IApplicationDbContext _db;
-    public RecordPaymentCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly IGeneralLedgerPoster _ledger;
+    public RecordPaymentCommandHandler(IApplicationDbContext db, IGeneralLedgerPoster ledger)
+    {
+        _db = db;
+        _ledger = ledger;
+    }
 
     public async Task<Result<Guid>> Handle(RecordPaymentCommand request, CancellationToken ct)
     {
@@ -57,6 +63,9 @@ public sealed class RecordPaymentCommandHandler : IRequestHandler<RecordPaymentC
             Reference = request.Reference
         };
         _db.Payments.Add(payment);
+
+        try { await _ledger.PostSalesPaymentAsync(payment, ct); }
+        catch (DomainException ex) { return Result.Failure<Guid>(Error.Conflict(ex.Message)); }
 
         await _db.SaveChangesAsync(ct);
         return Result.Success(payment.Id);

@@ -316,3 +316,100 @@ export interface Attachment {
   sizeBytes: number;
   createdAt: string;
 }
+
+// --- Accounting (general ledger) ---
+
+export type AccountType = 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense';
+
+export interface Account {
+  id: string;
+  code: string;
+  name: string;
+  type: AccountType;
+  isSystem: boolean;
+  isActive: boolean;
+}
+
+export type JournalEntryStatus = 'Draft' | 'Posted' | 'Voided';
+export type JournalEntrySource = 'Manual' | 'SalesInvoice' | 'SupplierInvoice' | 'Payment';
+
+export interface JournalEntrySummary {
+  id: string;
+  entryDate: string;
+  reference: string;
+  status: JournalEntryStatus;
+  source: JournalEntrySource;
+  totalDebits: number;
+  totalCredits: number;
+}
+
+export interface JournalLine {
+  id: string;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  debit: number;
+  credit: number;
+  memo?: string | null;
+}
+
+export interface JournalEntryDetail {
+  id: string;
+  branchId?: string | null;
+  entryDate: string;
+  reference: string;
+  description?: string | null;
+  status: JournalEntryStatus;
+  source: JournalEntrySource;
+  sourceDocumentId?: string | null;
+  preparedBy?: string | null;
+  postedBy?: string | null;
+  totalDebits: number;
+  totalCredits: number;
+  lines: JournalLine[];
+}
+
+export interface ManualJournalLineInput {
+  accountId: string;
+  debit: number;
+  credit: number;
+  memo?: string | null;
+}
+
+export interface CreateManualJournalEntryInput {
+  entryDate: string;
+  reference: string;
+  description?: string | null;
+  lines: ManualJournalLineInput[];
+}
+
+export interface AccountingPeriod {
+  id: string;
+  year: number;
+  month: number;
+  isClosed: boolean;
+  closedBy?: string | null;
+  closedAt?: string | null;
+}
+
+export type BankStatementLineSource = 'Imported' | 'Manual';
+
+export interface BankStatementLine {
+  id: string;
+  statementDate: string;
+  amount: number;
+  description?: string | null;
+  source: BankStatementLineSource;
+  isMatched: boolean;
+  matchedJournalLineId?: string | null;
+}
+
+export interface UnreconciledJournalLine {
+  journalLineId: string;
+  journalEntryId: string;
+  entryDate: string;
+  reference: string;
+  debit: number;
+  credit: number;
+  memo?: string | null;
+}

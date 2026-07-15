@@ -12,6 +12,9 @@ import {
   ScrollText,
   UserCog,
   SlidersHorizontal,
+  Landmark,
+  BookOpen,
+  CalendarClock,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -53,6 +56,35 @@ export const NAV: NavSection[] = [
       { to: '/suppliers', label: 'Suppliers', icon: Truck },
       { to: '/purchase-orders', label: 'Purchase Orders', icon: ClipboardList },
       { to: '/supplier-invoices', label: 'Supplier Invoices', icon: ReceiptText },
+    ],
+  },
+  {
+    heading: 'Accounting',
+    items: [
+      {
+        to: '/accounting/chart-of-accounts',
+        label: 'Chart of Accounts',
+        icon: Landmark,
+        roles: ['Administrator', 'Manager'],
+      },
+      {
+        to: '/accounting/journal-entries',
+        label: 'Journal Entries',
+        icon: BookOpen,
+        roles: ['Administrator', 'Manager'],
+      },
+      {
+        to: '/accounting/bank-reconciliation',
+        label: 'Bank Reconciliation',
+        icon: Landmark,
+        roles: ['Administrator', 'Manager'],
+      },
+      {
+        to: '/accounting/periods',
+        label: 'Accounting Periods',
+        icon: CalendarClock,
+        roles: ['Administrator', 'Manager'],
+      },
     ],
   },
   {
