@@ -148,9 +148,21 @@ public sealed class ApplicationDbContextInitialiser
 
         try
         {
-            return !await TableExistsAsync(connection, "CompanyProfiles")
-                   || !await TableExistsAsync(connection, "AspNetUsers")
-                   || !await TableExistsAsync(connection, "AspNetRoles");
+            // Checked against every table the current model defines (not a hand-maintained list) so
+            // a schema drift like this — an existing SQLite file predating a new migration — is caught
+            // automatically the next time a module adds tables, instead of silently missing them again.
+            var modelTableNames = _db.Model.GetEntityTypes()
+                .Select(t => t.GetTableName())
+                .Where(name => name is not null)
+                .Distinct();
+
+            foreach (var tableName in modelTableNames)
+            {
+                if (!await TableExistsAsync(connection, tableName!))
+                    return true;
+            }
+
+            return false;
         }
         finally
         {
