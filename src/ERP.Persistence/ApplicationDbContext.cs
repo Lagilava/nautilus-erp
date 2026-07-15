@@ -1,5 +1,6 @@
 using System.Reflection;
 using ERP.Application.Common.Interfaces;
+using ERP.Domain.Accounting;
 using ERP.Domain.Auditing;
 using ERP.Domain.Catalog;
 using ERP.Domain.Common;
@@ -54,6 +55,13 @@ public sealed class ApplicationDbContext
     public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
 
     public DbSet<Attachment> Attachments => Set<Attachment>();
+
+    public DbSet<Account> Accounts => Set<Account>();
+    public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
+    public DbSet<JournalLine> JournalLines => Set<JournalLine>();
+    public DbSet<AccountingPeriod> AccountingPeriods => Set<AccountingPeriod>();
+    public DbSet<BankStatementLine> BankStatementLines => Set<BankStatementLine>();
+    public DbSet<Reconciliation> Reconciliations => Set<Reconciliation>();
 
     public DbSet<Currency> Currencies => Set<Currency>();
     public DbSet<UnitOfMeasure> UnitsOfMeasure => Set<UnitOfMeasure>();

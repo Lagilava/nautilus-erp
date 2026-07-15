@@ -1,5 +1,6 @@
 using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Security;
+using ERP.Application.Common.Services;
 using ERP.Domain.Common;
 using ERP.Shared.Results;
 using MediatR;
@@ -17,16 +18,19 @@ public sealed class IssueInvoiceCommandHandler : IRequestHandler<IssueInvoiceCom
     private readonly IRealtimeNotifier _notifications;
     private readonly IEmailQueue _email;
     private readonly ICurrentUserService _currentUser;
+    private readonly IGeneralLedgerPoster _ledger;
 
     public IssueInvoiceCommandHandler(
         IApplicationDbContext db, IFiscalizationService fiscalization,
-        IRealtimeNotifier notifications, IEmailQueue email, ICurrentUserService currentUser)
+        IRealtimeNotifier notifications, IEmailQueue email, ICurrentUserService currentUser,
+        IGeneralLedgerPoster ledger)
     {
         _db = db;
         _fiscalization = fiscalization;
         _notifications = notifications;
         _email = email;
         _currentUser = currentUser;
+        _ledger = ledger;
     }
 
     public async Task<Result> Handle(IssueInvoiceCommand request, CancellationToken ct)
@@ -42,6 +46,9 @@ public sealed class IssueInvoiceCommandHandler : IRequestHandler<IssueInvoiceCom
         // Submitted with an accreditation reference. Either way the outcome is persisted.
         var fiscal = await _fiscalization.SubmitAsync(invoice, ct);
         invoice.SetFiscalResult(fiscal.Status, fiscal.Reference);
+
+        try { await _ledger.PostSalesInvoiceIssuedAsync(invoice, ct); }
+        catch (DomainException ex) { return Result.Failure(Error.Conflict(ex.Message)); }
 
         await _db.SaveChangesAsync(ct);
 

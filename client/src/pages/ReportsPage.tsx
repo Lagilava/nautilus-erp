@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { FileSpreadsheet, FileText, FileDown, Eye, EyeOff, BarChart3 } from 'lucide-react';
 import { api, apiErrorMessage } from '../lib/api';
@@ -29,12 +29,18 @@ function ReportCard({
   path,
   slug,
   previewPath,
+  params,
+  filters,
 }: {
   title: string;
   description: string;
   path: string;
   slug: string;
   previewPath?: string;
+  /** Extra query params (e.g. date filters) sent with both the preview and the export request. */
+  params?: Record<string, string | undefined>;
+  /** Optional filter controls rendered above the action buttons. */
+  filters?: ReactNode;
 }) {
   const toast = useToast();
   const [busy, setBusy] = useState<number | null>(null);
@@ -42,8 +48,8 @@ function ReportCard({
   const [showPreview, setShowPreview] = useState(false);
 
   const preview = useQuery({
-    queryKey: ['report-preview', previewPath],
-    queryFn: async () => (await api.get<ReportTable>(previewPath!)).data,
+    queryKey: ['report-preview', previewPath, params],
+    queryFn: async () => (await api.get<ReportTable>(previewPath!, { params })).data,
     enabled: showPreview && !!previewPath,
   });
 
@@ -52,7 +58,7 @@ function ReportCard({
     setError(null);
     try {
       // Authenticated download: fetch as a blob (so the bearer header is attached), then save.
-      const response = await api.get(path, { params: { format }, responseType: 'blob' });
+      const response = await api.get(path, { params: { ...params, format }, responseType: 'blob' });
       const disposition = response.headers['content-disposition'] as string | undefined;
       const match = disposition?.match(/filename="?([^"]+)"?/);
       const filename = match?.[1] ?? `${slug}.${format === 2 ? 'xlsx' : format === 3 ? 'pdf' : 'csv'}`;
@@ -80,6 +86,7 @@ function ReportCard({
           <ErrorNote message={error} />
         </div>
       )}
+      {filters && <div className="mt-4">{filters}</div>}
       <div className="mt-5 flex flex-wrap gap-3">
         {FORMATS.map((f) => (
           <button key={f.key} className="btn-secondary" onClick={() => download(f.key)} disabled={busy !== null}>
@@ -137,6 +144,112 @@ function ReportCard({
   );
 }
 
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Trial balance: a single as-of date filter. */
+function TrialBalanceCard() {
+  const [asOfDate, setAsOfDate] = useState(todayIso());
+  return (
+    <ReportCard
+      title="Trial Balance"
+      description="Every posted account with its net debit or credit balance as of a given date."
+      path="/api/reports/trial-balance"
+      previewPath="/api/reports/trial-balance/data"
+      slug="trial-balance"
+      params={{ asOfDate }}
+      filters={
+        <div>
+          <label className="field-label" htmlFor="tb-as-of">
+            As of
+          </label>
+          <input
+            id="tb-as-of"
+            type="date"
+            className="input w-auto"
+            value={asOfDate}
+            onChange={(e) => setAsOfDate(e.target.value)}
+          />
+        </div>
+      }
+    />
+  );
+}
+
+/** Profit & loss: a from/to date range. */
+function ProfitAndLossCard() {
+  const [fromDate, setFromDate] = useState(() => todayIso().slice(0, 8) + '01');
+  const [toDate, setToDate] = useState(todayIso());
+  return (
+    <ReportCard
+      title="Profit & Loss"
+      description="Revenue and expense accounts summarized over a date range, with net income."
+      path="/api/reports/profit-and-loss"
+      previewPath="/api/reports/profit-and-loss/data"
+      slug="profit-and-loss"
+      params={{ fromDate, toDate }}
+      filters={
+        <div className="flex flex-wrap gap-4">
+          <div>
+            <label className="field-label" htmlFor="pl-from">
+              From
+            </label>
+            <input
+              id="pl-from"
+              type="date"
+              className="input w-auto"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="pl-to">
+              To
+            </label>
+            <input
+              id="pl-to"
+              type="date"
+              className="input w-auto"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+            />
+          </div>
+        </div>
+      }
+    />
+  );
+}
+
+/** Balance sheet: a single as-of date filter. */
+function BalanceSheetCard() {
+  const [asOfDate, setAsOfDate] = useState(todayIso());
+  return (
+    <ReportCard
+      title="Balance Sheet"
+      description="Assets, liabilities and equity as of a given date."
+      path="/api/reports/balance-sheet"
+      previewPath="/api/reports/balance-sheet/data"
+      slug="balance-sheet"
+      params={{ asOfDate }}
+      filters={
+        <div>
+          <label className="field-label" htmlFor="bs-as-of">
+            As of
+          </label>
+          <input
+            id="bs-as-of"
+            type="date"
+            className="input w-auto"
+            value={asOfDate}
+            onChange={(e) => setAsOfDate(e.target.value)}
+          />
+        </div>
+      }
+    />
+  );
+}
+
 export function ReportsPage() {
   return (
     <>
@@ -167,6 +280,9 @@ export function ReportsPage() {
           path="/api/reports/inventory-valuation"
           slug="inventory-valuation"
         />
+        <TrialBalanceCard />
+        <ProfitAndLossCard />
+        <BalanceSheetCard />
       </div>
     </>
   );

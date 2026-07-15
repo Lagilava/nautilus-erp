@@ -169,6 +169,39 @@ receipts across multiple deliveries are supported (`QuantityReceived`/`Outstandi
 Reports are provider-agnostic: a query builds a `ReportTable`, and `IReportExporter`
 (CSV native, Excel via ClosedXML, PDF via QuestPDF) renders the requested format.
 
+## General Ledger / Accounting (Milestone 12)
+
+Reads: any authenticated user, unless noted. Writes: `Administrator`/`Manager` as noted.
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| GET | `/api/chart-of-accounts?activeOnly=` | List accounts |
+| GET | `/api/chart-of-accounts/{id}` | View one account |
+| POST | `/api/chart-of-accounts` (**Administrator**) | Create an account |
+| POST | `/api/chart-of-accounts/{id}/deactivate` (**Administrator**) | Deactivate (system accounts can't be deleted, only deactivated) |
+| GET | `/api/journal-entries?status&source&fromDate&toDate&page&pageSize` | Paged list of journal entries |
+| GET | `/api/journal-entries/{id}` | View one entry with its lines |
+| POST | `/api/journal-entries` (**Manager/Administrator**) | Create a manual entry (Draft) |
+| POST | `/api/journal-entries/{id}/post` (**Manager/Administrator**) | Post a Draft entry — SoD: preparer ≠ poster |
+| POST | `/api/journal-entries/{id}/void` (**Manager/Administrator**) | Void a Posted entry via a reversing entry |
+| GET | `/api/accounting-periods` | List accounting periods and their lock status |
+| POST | `/api/accounting-periods/close` (**Administrator**) | Close a period — rejected if unposted (Draft) entries remain in it |
+| GET | `/api/bank-reconciliation/statement-lines/unreconciled` | Unmatched bank statement lines |
+| GET | `/api/bank-reconciliation/journal-lines/unreconciled` | Unmatched posted Cash-account journal lines |
+| POST | `/api/bank-reconciliation/statement-lines` (**Manager/Administrator**) | Add a statement line (imported or manual) |
+| POST | `/api/bank-reconciliation/match` (**Manager/Administrator**) | Match a statement line to a journal line (amounts must agree) |
+| POST | `/api/bank-reconciliation/statement-lines/{id}/unmatch` (**Manager/Administrator**) | Undo a match |
+| GET | `/api/reports/trial-balance{,/data}?branchId&asOfDate&format` | Trial balance (`/data` = JSON, otherwise CSV/Excel/PDF export) |
+| GET | `/api/reports/profit-and-loss{,/data}?fromDate&toDate&branchId&format` | P&L for a date range |
+| GET | `/api/reports/balance-sheet{,/data}?asOfDate&branchId&format` | Balance sheet as of a date |
+
+**Auto-posting:** issuing a sales invoice (Dr Accounts Receivable, Cr Sales Revenue + Cr Sales
+Tax Payable if taxed), recording a sales payment (Dr Cash, Cr Accounts Receivable), approving a
+supplier invoice (Dr Inventory, Cr Accounts Payable), and paying a supplier invoice (Dr Accounts
+Payable, Cr Cash) each post a balanced `JournalEntry` synchronously in the same
+`SaveChangesAsync` as the business event — no outbox/event bus involved. Auto-posted entries
+skip the SoD preparer/poster check (no human "preparer" exists for a system posting).
+
 ## Notifications (Milestone 9)
 
 - **SignalR hub:** `/hubs/notifications` (authenticated). Clients handle the `notification`

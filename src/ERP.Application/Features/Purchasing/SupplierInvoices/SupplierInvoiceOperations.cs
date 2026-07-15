@@ -1,6 +1,7 @@
 using ERP.Application.Common.Interfaces;
 using ERP.Application.Common.Models;
 using ERP.Application.Common.Security;
+using ERP.Application.Common.Services;
 using ERP.Application.Features.Sales;
 using ERP.Domain.Common;
 using ERP.Domain.Purchasing;
@@ -21,13 +22,16 @@ public sealed class ApproveSupplierInvoiceCommandHandler : IRequestHandler<Appro
     private readonly IApplicationDbContext _db;
     private readonly ISegregationOfDuties _sod;
     private readonly ICurrentUserService _currentUser;
+    private readonly IGeneralLedgerPoster _ledger;
 
     public ApproveSupplierInvoiceCommandHandler(
-        IApplicationDbContext db, ISegregationOfDuties sod, ICurrentUserService currentUser)
+        IApplicationDbContext db, ISegregationOfDuties sod, ICurrentUserService currentUser,
+        IGeneralLedgerPoster ledger)
     {
         _db = db;
         _sod = sod;
         _currentUser = currentUser;
+        _ledger = ledger;
     }
 
     public async Task<Result> Handle(ApproveSupplierInvoiceCommand request, CancellationToken ct)
@@ -51,6 +55,10 @@ public sealed class ApproveSupplierInvoiceCommandHandler : IRequestHandler<Appro
 
         try { inv.Approve(_currentUser.UserId?.ToString()); }
         catch (DomainException ex) { return Result.Failure(Error.Conflict(ex.Message)); }
+
+        try { await _ledger.PostSupplierInvoiceApprovedAsync(inv, ct); }
+        catch (DomainException ex) { return Result.Failure(Error.Conflict(ex.Message)); }
+
         await _db.SaveChangesAsync(ct);
         return Result.Success();
     }
@@ -111,11 +119,14 @@ public sealed class RecordSupplierPaymentCommandHandler
 {
     private readonly IApplicationDbContext _db;
     private readonly ISegregationOfDuties _sod;
+    private readonly IGeneralLedgerPoster _ledger;
 
-    public RecordSupplierPaymentCommandHandler(IApplicationDbContext db, ISegregationOfDuties sod)
+    public RecordSupplierPaymentCommandHandler(
+        IApplicationDbContext db, ISegregationOfDuties sod, IGeneralLedgerPoster ledger)
     {
         _db = db;
         _sod = sod;
+        _ledger = ledger;
     }
 
     public async Task<Result<Guid>> Handle(RecordSupplierPaymentCommand request, CancellationToken ct)
@@ -146,6 +157,9 @@ public sealed class RecordSupplierPaymentCommandHandler
             Reference = request.Reference
         };
         _db.SupplierPayments.Add(payment);
+
+        try { await _ledger.PostSupplierPaymentAsync(payment, ct); }
+        catch (DomainException ex) { return Result.Failure<Guid>(Error.Conflict(ex.Message)); }
 
         await _db.SaveChangesAsync(ct);
         return Result.Success(payment.Id);

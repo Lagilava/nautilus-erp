@@ -42,6 +42,21 @@ const SupplierInvoicesPage = lazy(() =>
 const SupplierInvoiceDetailPage = lazy(() =>
   import('./pages/purchasing/SupplierInvoiceDetailPage').then((m) => ({ default: m.SupplierInvoiceDetailPage })),
 );
+const ChartOfAccountsPage = lazy(() =>
+  import('./pages/accounting/ChartOfAccountsPage').then((m) => ({ default: m.ChartOfAccountsPage })),
+);
+const JournalEntriesPage = lazy(() =>
+  import('./pages/accounting/JournalEntriesPage').then((m) => ({ default: m.JournalEntriesPage })),
+);
+const JournalEntryDetailPage = lazy(() =>
+  import('./pages/accounting/JournalEntryDetailPage').then((m) => ({ default: m.JournalEntryDetailPage })),
+);
+const BankReconciliationPage = lazy(() =>
+  import('./pages/accounting/BankReconciliationPage').then((m) => ({ default: m.BankReconciliationPage })),
+);
+const AccountingPeriodsPage = lazy(() =>
+  import('./pages/accounting/AccountingPeriodsPage').then((m) => ({ default: m.AccountingPeriodsPage })),
+);
 const UsersPage = lazy(() => import('./pages/admin/UsersPage').then((m) => ({ default: m.UsersPage })));
 const SettingsPage = lazy(() => import('./pages/admin/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 
@@ -170,6 +185,47 @@ export default function App() {
           element={
             <Suspense fallback={<Loading />}>
               <SupplierInvoiceDetailPage />
+            </Suspense>
+          }
+        />
+
+        <Route
+          path="/accounting/chart-of-accounts"
+          element={
+            <Suspense fallback={<Loading />}>
+              <ChartOfAccountsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/accounting/journal-entries"
+          element={
+            <Suspense fallback={<Loading />}>
+              <JournalEntriesPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/accounting/journal-entries/:id"
+          element={
+            <Suspense fallback={<Loading />}>
+              <JournalEntryDetailPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/accounting/bank-reconciliation"
+          element={
+            <Suspense fallback={<Loading />}>
+              <BankReconciliationPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/accounting/periods"
+          element={
+            <Suspense fallback={<Loading />}>
+              <AccountingPeriodsPage />
             </Suspense>
           }
         />

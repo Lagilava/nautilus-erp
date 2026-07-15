@@ -43,6 +43,29 @@ Connection string: `ConnectionStrings:DefaultConnection` in `src/ERP.API/appsett
 
 Migrations: `ReferenceData`, `InventoryModule`, `SalesModule`, `PurchasingModule`.
 
+## General ledger / accounting (Milestone 12)
+- **Chart of accounts:** `Accounts` (`Code`, `Name`, `Type` — Asset/Liability/Equity/Revenue/
+  Expense, `IsSystem`, `IsActive`). Seven system accounts are seeded on startup: 1000 Cash,
+  1100 Accounts Receivable, 1200 Inventory, 2100 Accounts Payable, 2200 Sales Tax Payable,
+  4000 Sales Revenue, 5000 Cost of Goods Sold.
+- **Journal:** `JournalEntries` (`BranchId`, `EntryDate`, `Reference`, `Description`,
+  `Status` — Draft/Posted/Voided, `Source` — Manual/SalesInvoice/SupplierInvoice/Payment,
+  `SourceDocumentId`, `PreparedBy`, `PostedBy`) + `JournalLines` (`AccountId`, `Debit`,
+  `Credit`, `Memo`, plus nullable `CurrencyId`/`ExchangeRate` for multi-currency lines).
+  Account balances are never cached — the trial balance/P&L/balance sheet reports sum
+  `JournalLines` grouped by account/type on read, mirroring how `Invoice.Balance` is a
+  derived expression today.
+- **Period locking:** `AccountingPeriods` (`Year`, `Month`, `IsClosed`, `ClosedBy`,
+  `ClosedAt`). Both manual entry creation and auto-posting reject any entry dated inside a
+  closed period.
+- **Bank reconciliation:** `BankStatementLines` (`StatementDate`, `Amount`, `Description`,
+  `Source` — Imported/Manual, `MatchedJournalLineId`) + `Reconciliations` (one row per match,
+  audit trail of `MatchedJournalLineId`/`MatchedAt`/`MatchedBy`).
+
+Migrations: `GeneralLedgerModule`, `PeriodLockingAndReconciliation` (authored for both the
+default SQL Server provider under `src/ERP.Persistence/Migrations` and the Postgres provider
+under `src/ERP.Persistence.Migrations.Postgres/Migrations`).
+
 > **Guid PKs are code-assigned** (`BaseEntity`). `OnModelCreating` marks `BaseEntity` Guid keys
 > `ValueGenerated.Never` so EF classifies new children of tracked parents as inserts, not
 > updates. Identity's own key types are left untouched.

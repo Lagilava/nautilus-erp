@@ -67,4 +67,58 @@ public sealed class ReportsController : ApiControllerBase
     [HttpGet("payables-aging/data")]
     public async Task<IActionResult> PayablesAgingData(CancellationToken ct)
         => HandleResult(await Sender.Send(new GetPayablesAgingReportQuery(), ct));
+
+    [HttpGet("trial-balance")]
+    public async Task<IActionResult> TrialBalance(
+        [FromQuery] Guid? branchId, [FromQuery] DateOnly? asOfDate,
+        [FromQuery] ReportFormat format = ReportFormat.Csv, CancellationToken ct = default)
+    {
+        var result = await Sender.Send(new GetTrialBalanceQuery(branchId, asOfDate), ct);
+        if (result.IsFailure) return HandleResult(result);
+
+        var file = _exporter.Export(result.Value, format);
+        return File(file.Content, file.ContentType, file.FileName);
+    }
+
+    /// <summary>The trial-balance table as JSON, for on-screen display.</summary>
+    [HttpGet("trial-balance/data")]
+    public async Task<IActionResult> TrialBalanceData(
+        [FromQuery] Guid? branchId, [FromQuery] DateOnly? asOfDate, CancellationToken ct)
+        => HandleResult(await Sender.Send(new GetTrialBalanceQuery(branchId, asOfDate), ct));
+
+    [HttpGet("profit-and-loss")]
+    public async Task<IActionResult> ProfitAndLoss(
+        [FromQuery] DateOnly fromDate, [FromQuery] DateOnly toDate, [FromQuery] Guid? branchId,
+        [FromQuery] ReportFormat format = ReportFormat.Csv, CancellationToken ct = default)
+    {
+        var result = await Sender.Send(new GetProfitAndLossQuery(fromDate, toDate, branchId), ct);
+        if (result.IsFailure) return HandleResult(result);
+
+        var file = _exporter.Export(result.Value, format);
+        return File(file.Content, file.ContentType, file.FileName);
+    }
+
+    /// <summary>The profit-and-loss table as JSON, for on-screen display.</summary>
+    [HttpGet("profit-and-loss/data")]
+    public async Task<IActionResult> ProfitAndLossData(
+        [FromQuery] DateOnly fromDate, [FromQuery] DateOnly toDate, [FromQuery] Guid? branchId, CancellationToken ct)
+        => HandleResult(await Sender.Send(new GetProfitAndLossQuery(fromDate, toDate, branchId), ct));
+
+    [HttpGet("balance-sheet")]
+    public async Task<IActionResult> BalanceSheet(
+        [FromQuery] DateOnly asOfDate, [FromQuery] Guid? branchId,
+        [FromQuery] ReportFormat format = ReportFormat.Csv, CancellationToken ct = default)
+    {
+        var result = await Sender.Send(new GetBalanceSheetQuery(asOfDate, branchId), ct);
+        if (result.IsFailure) return HandleResult(result);
+
+        var file = _exporter.Export(result.Value, format);
+        return File(file.Content, file.ContentType, file.FileName);
+    }
+
+    /// <summary>The balance-sheet table as JSON, for on-screen display.</summary>
+    [HttpGet("balance-sheet/data")]
+    public async Task<IActionResult> BalanceSheetData(
+        [FromQuery] DateOnly asOfDate, [FromQuery] Guid? branchId, CancellationToken ct)
+        => HandleResult(await Sender.Send(new GetBalanceSheetQuery(asOfDate, branchId), ct));
 }

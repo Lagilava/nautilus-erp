@@ -79,6 +79,7 @@ is a **React 19 + TypeScript** SPA (Vite, TanStack Query, Tailwind).
 | M9 | Notifications | SignalR live updates + Hangfire email queue |
 | M10 | React SPA | Auth, dashboard, catalog, order-to-cash, procure-to-pay, admin, command palette, AI assistant |
 | M11 | Hardening | Rate limiting, response compression, security headers, DB health checks, Docker |
+| M12 | General Ledger | Chart of accounts, manual + auto-posted journal entries, trial balance/P&L/balance sheet, accounting period locking, bank reconciliation, multi-currency journal lines |
 
 <p align="center">
   <img src="docs/screenshots/command-palette.png" alt="Global command palette (Ctrl+K)" width="440"/>
