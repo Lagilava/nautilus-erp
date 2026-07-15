@@ -319,20 +319,23 @@ def build():
     )
     para(
         doc,
-        "The system covers six areas of the business. A catalogue holds products, categories, units "
+        "The system covers seven areas of the business. A catalogue holds products, categories, units "
         "of measure, currencies and tax rates. An inventory module tracks stock in warehouses and "
         "values it using FIFO — first-in, first-out, meaning the oldest stock you bought is treated "
         "as the first stock you sold. A sales module carries a customer order through to an issued "
         "invoice and the payments against it. A purchasing module does the mirror image: a purchase "
         "order, the goods receipt when the delivery arrives, the supplier's bill and the payment. A "
-        "reporting module summarises the position and exports it. An administration module manages "
-        "users, roles, branches and company details, and exposes an audit trail of every change.",
+        "general ledger records a balanced journal entry for every one of those money-moving events — "
+        "automatically, not as separate bookkeeping — and turns them into a trial balance, profit and "
+        "loss statement and balance sheet. A reporting module summarises the position and exports it. "
+        "An administration module manages users, roles, branches and company details, and exposes an "
+        "audit trail of every change.",
     )
     para(
         doc,
         "Three independent layers of access control sit over all of this. Roles decide what kind of "
         "action a person may take. Branch scoping decides which records they can see at all. "
-        "Segregation of duties — five maker-checker rules — prevents one person from completing a "
+        "Segregation of duties — seven maker-checker rules — prevents one person from completing a "
         "purchase-to-payment chain on their own, which is the classic route by which a business is "
         "defrauded by its own staff. Customers never sign in; this is a staff system.",
     )
@@ -341,17 +344,20 @@ def build():
         "Two limitations deserve to appear this early, because a report that buries them is not worth "
         "reading. First, the system does not submit invoices to the Fiji Revenue and Customs Service. "
         "The integration point for FRCS fiscalization exists and is honest about itself: every issued "
-        "invoice is recorded as NotSubmitted. Nothing is faked as accredited. Second, Nautilus ERP is "
-        "not an accounting system. It has no general ledger and no double-entry bookkeeping. It "
-        "records the operational truth of the business and can feed an accountant; it does not replace "
-        "one. Section 8.1 sets out the full list of known limitations.",
+        "invoice is recorded as NotSubmitted. Nothing is faked as accredited. Second, while Nautilus ERP "
+        "now keeps a real double-entry general ledger — a chart of accounts, journal entries that "
+        "balance by construction, and period locking so a closed month cannot be posted into — it is "
+        "not a certified accounting package: there is no live exchange-rate feed (rates are entered by "
+        "hand on a journal line), no tax-authority lodgement of any statutory return, and bank "
+        "reconciliation is a manual match against imported or hand-entered statement lines, not a bank "
+        "feed. Section 8.1 sets out the full list of known limitations.",
     )
 
     # ============================================================ 2
     h1(doc, "2. What the system does")
     para(
         doc,
-        "The following six modules make up the working system. Each is implemented end to end: a "
+        "The following seven modules make up the working system. Each is implemented end to end: a "
         "domain model, application logic, an HTTP endpoint, and a screen in the browser client.",
     )
 
@@ -380,9 +386,14 @@ def build():
                 "Raise and approve a purchase order, receive goods into stock, approve the supplier's bill, pay it",
             ),
             (
+                "General ledger",
+                "Chart of accounts, journal entries and their lines, accounting periods, bank statement lines",
+                "Post (or auto-post) balanced journal entries, lock a closed period, reconcile a bank statement, read a trial balance, P&L or balance sheet",
+            ),
+            (
                 "Reporting",
-                "Dashboard key figures, inventory valuation, sales trend",
-                "Read the current position; export the inventory valuation report as CSV, Excel or PDF; print a Fiji tax invoice as PDF",
+                "Dashboard key figures, inventory valuation, sales trend, trial balance, P&L, balance sheet",
+                "Read the current position; export reports as CSV, Excel or PDF; print a Fiji tax invoice as PDF",
             ),
             (
                 "Administration",
@@ -392,10 +403,10 @@ def build():
         ],
         widths=[1.6, 2.2, 2.7],
     )
-    caption(doc, "Table 2 — The six modules of Nautilus ERP.")
+    caption(doc, "Table 2 — The seven modules of Nautilus ERP.")
     para(
         doc,
-        "A seventh capability sits underneath these six rather than beside them: any record in any "
+        "An eighth capability sits underneath these seven rather than beside them: any record in any "
         "module can carry file attachments — a scanned supplier invoice, a delivery photo, a signed "
         "contract — uploaded, listed, downloaded and removed by referencing the record they belong to, "
         "without a schema change per module. The screen is live today on the four document detail pages "
@@ -441,6 +452,39 @@ def build():
         "this month, money owed by customers and to suppliers, open orders on both sides), a sales trend, "
         "and an inventory valuation report exportable as CSV, Excel or PDF. A customer invoice can also "
         "be rendered as a Fiji-format PDF tax invoice.",
+    )
+
+    h2(doc, "2.4 Accounting")
+    para(
+        doc,
+        "Nautilus ERP keeps a real double-entry ledger underneath the operational documents. A chart of "
+        "accounts (Cash, Accounts Receivable, Inventory, Accounts Payable, Sales Tax Payable, Sales "
+        "Revenue, Cost of Goods Sold — seeded on first run) receives a balanced journal entry whenever "
+        "an invoice is issued, a customer payment is recorded, or a supplier invoice is approved or "
+        "paid. Nobody has to remember to book these; the same handler that changes a document's status "
+        "posts the entry in the same transaction. A journal entry can also be raised by hand, for "
+        "adjustments the operational documents do not cover; a manual entry only becomes permanent once "
+        "posted, and posting is refused unless its debits equal its credits — the fundamental rule of "
+        "double-entry accounting, enforced by the domain, not left to a database constraint.",
+    )
+    para(
+        doc,
+        "A posted entry is never edited or deleted. Voiding one writes a second, reversing entry instead "
+        "— the same discipline the sales and purchasing modules already apply to invoices. Journal "
+        "entries are scoped to the branch that raised them, so one branch's revenue cannot appear in "
+        "another branch's numbers. An accounting period can be locked once its books are settled, after "
+        "which nothing can post into it — including the automatic postings from sales and purchasing. "
+        "A bank reconciliation screen matches a bank statement's lines, imported or entered by hand, "
+        "against the Cash account's posted journal lines, so an operator can see what the bank has "
+        "recorded that the ledger has not, and the reverse.",
+    )
+    para(
+        doc,
+        "Three reports read the ledger directly, rather than recomputing figures from the sales and "
+        "purchasing tables the way the dashboard does: a trial balance (every account's debit and "
+        "credit total, which must net to zero), a profit and loss statement (revenue and expense "
+        "accounts over a date range), and a balance sheet (assets, liabilities and equity as of a "
+        "date). All three export as CSV, Excel or PDF alongside the existing reports.",
     )
 
     # ============================================================ 3
@@ -511,7 +555,7 @@ def build():
         "Segregation of duties is the principle that no single person should be able to complete a "
         "transaction chain alone. The fraud it prevents is well known: raise a purchase order to a "
         "supplier you control, approve your own order, record goods that never arrived, approve the "
-        "invoice for them, and pay it. Nautilus ERP breaks that chain in five places. Each rule compares "
+        "invoice for them, and pay it. Nautilus ERP breaks that chain in seven places. Each rule compares "
         "the person attempting the current step against the people who performed the earlier, conflicting "
         "steps on the same document chain.",
     )
@@ -544,10 +588,20 @@ def build():
                 "the person who issued the customer invoice",
                 "Quietly cancelling a sale you recorded — a common way to conceal cash theft",
             ),
+            (
+                "SupplierInvoiceCancel",
+                "the person who approved a bill someone else entered",
+                "Using cancellation as a back door out of an approval you were not allowed to grant yourself",
+            ),
+            (
+                "JournalEntryPosting",
+                "the person who prepared the manual journal entry",
+                "Booking and self-approving your own manual adjustment to the ledger",
+            ),
         ],
         widths=[1.9, 2.6, 2.5],
     )
-    caption(doc, "Table 4 — The five segregation-of-duties rules, enforced by default.")
+    caption(doc, "Table 4 — The seven segregation-of-duties rules, enforced by default.")
     para(
         doc,
         "A blocked attempt returns a 403 Forbidden response with an explanation, and is written to the "
@@ -588,7 +642,7 @@ def build():
         "it to PartiallyReceived and finally Received. Posting a goods receipt is the point at which "
         "stock actually enters the warehouse and a FIFO cost layer is created at the purchase-order unit "
         "cost. Over-receiving a line is refused and nothing is posted. The supplier's bill is then raised "
-        "from the order, capturing input VAT, approved, and paid. Four of the five segregation-of-duties "
+        "from the order, capturing input VAT, approved, and paid. Four of the seven segregation-of-duties "
         "rules police this chain.",
     )
 
@@ -874,13 +928,14 @@ def build():
             "No email verification of accounts, and no public self-registration — accounts are created by an administrator, which mitigates that but does not remove it.",
             "The refresh token is held in the browser's localStorage. This is convenient and survives a page reload, but it is readable by any script that manages to run on the page, so a cross-site scripting flaw would be more damaging than it would be with an HttpOnly cookie.",
             "File attachments have a screen on the four document detail pages (sales orders, invoices, purchase orders, supplier invoices) but not on other record types — products, customers and suppliers can be attached to over the API, but nothing in the interface calls it there yet.",
-            "No general ledger and no double-entry accounting. Nautilus ERP records operational transactions — stock, invoices, payments — not journals, chart of accounts or trial balance. It is not a substitute for accounting software.",
+            "The general ledger exists and enforces double-entry, but it is not a certified accounting package. There is no live exchange-rate feed — a journal line's exchange rate is entered by hand and stored at posting time — and no lodgement of any statutory return to a tax authority.",
+            "Bank reconciliation is a manual match against statement lines the operator imports or types in; there is no bank feed, so a statement has to be obtained and entered before it can be reconciled.",
             "FRCS / VMS fiscalization is not integrated. Every issued invoice remains NotSubmitted. See section 7.1.",
             "Real-time notifications sent through SignalR are broadcast to every connected staff member. Per-user targeting exists in the code, but the business events that fire notifications use the broadcast path, so a notification about one branch's invoice reaches everyone signed in.",
             "Emails (password resets, notifications) are queued for background delivery and sent over real SMTP when a mail server is configured; left unconfigured, delivery falls back to a stub that writes the email to the log instead, which is what a fresh checkout does until someone supplies SMTP settings.",
             "The Hangfire background job store is in-memory, so queued work does not survive a restart of the API.",
             "File attachments are written to local disk by default. That is durable on a single persistent instance but not on an ephemeral or multi-instance host; a cloud storage adapter would need to be substituted for those deployments, and the abstraction (IFileStorage) is written so that substitution needs no change to the callers.",
-            "Multi-currency is modelled — FJD is the base currency and currencies are reference data — but there is no exchange-rate table in use and no bank reconciliation, RTGS/ACH or mobile-wallet payment integration. Mobile wallet is a payment method you may record, not a payment rail the system connects to.",
+            "Multi-currency is modelled on both the operational documents and the general ledger — FJD is the base currency, currencies are reference data, and a journal line may carry its own currency and exchange rate — but there is no RTGS/ACH or mobile-wallet payment integration. Mobile wallet is a payment method you may record, not a payment rail the system connects to.",
             "There is no offline mode. GUID primary keys keep that option open architecturally; nothing implements it.",
         ],
     )
@@ -910,6 +965,11 @@ def build():
             ("Soft delete", "Deleted records are marked as deleted and hidden, not destroyed — so history and the audit trail stay intact."),
             ("Void", "Cancelling an issued invoice before any payment. The invoice remains on record, marked Void; it does not vanish."),
             ("Draft / Confirmed / Issued …", "Document states. A document can only move along its defined path (section 4); illegal jumps are refused."),
+            ("Chart of accounts", "The fixed list of accounts (Cash, Accounts Receivable, Sales Revenue, and so on) that every journal entry posts against."),
+            ("Journal entry", "A dated, balanced set of debit and credit lines. Posting one is how a sale, a payment or a manual adjustment becomes part of the ledger."),
+            ("Debit / credit", "The two sides of every journal line. An entry may only be posted when its total debits equal its total credits — the double-entry rule."),
+            ("Trial balance", "A listing of every account's total debits and credits as of a date; the two columns must be equal, which is what proves the ledger balances."),
+            ("Accounting period", "A calendar month (or year) that can be locked once its books are settled, after which nothing — including automatic postings — can be recorded into it."),
         ],
         widths=[1.8, 5.1],
     )
@@ -971,7 +1031,7 @@ def build():
     h1(doc, "11. The API surface")
     para(
         doc,
-        "The API exposes 83 endpoints across 21 controllers, all under /api and all requiring "
+        "The API exposes 112 endpoints across 26 controllers, all under /api and all requiring "
         "authentication except sign-in, the MFA challenge, token refresh and the password-reset pair. "
         "Interactive documentation is served at /swagger in development. The table groups the controllers "
         "by module; docs/API.md in the repository documents each endpoint individually.",
@@ -997,28 +1057,33 @@ def build():
             ),
             (
                 "Sales",
-                "Customers (2), SalesOrders (6), Invoices (8)",
+                "Customers (3), SalesOrders (6), Invoices (8)",
                 "Order lifecycle actions, invoice issue/void/payments, and the PDF tax-invoice download",
             ),
             (
                 "Purchasing",
-                "Suppliers (2), PurchaseOrders (6), SupplierInvoices (6)",
-                "Order lifecycle, goods receipts (Staff may post), supplier-invoice approval and payments",
+                "Suppliers (2), PurchaseOrders (7), SupplierInvoices (6)",
+                "Order lifecycle, goods receipts (Staff may post), reorder-draft generation, supplier-invoice approval and payments",
+            ),
+            (
+                "General ledger",
+                "ChartOfAccounts (4), JournalEntries (5), AccountingPeriods (2), BankReconciliation (5)",
+                "Create and post/void journal entries, manage the chart of accounts, lock a period, reconcile bank statement lines",
             ),
             (
                 "Reporting & admin",
-                "Dashboard (2), Reports (1), Company (2), AuditLogs (1)",
-                "Dashboard figures and sales trend; inventory valuation export; company profile; audit trail (Administrator-only)",
+                "Dashboard (2), Reports (11), Company (2), AuditLogs (1)",
+                "Dashboard figures and sales trend; inventory valuation, aging, trial balance, P&L and balance sheet exports; company profile; audit trail (Administrator-only)",
             ),
             (
-                "Documents",
-                "Attachments (4)",
-                "Upload, list, download and delete a file against any record, referenced by entity type and id; the browser client uses it on the four document detail pages",
+                "Documents & search",
+                "Attachments (4), Search (1)",
+                "Upload, list, download and delete a file against any record, referenced by entity type and id; a single global search endpoint backs the command palette",
             ),
         ],
         widths=[1.5, 3.0, 2.4],
     )
-    caption(doc, "Table 9 — The 21 controllers and 83 endpoints, grouped by module.")
+    caption(doc, "Table 9 — The 26 controllers and 112 endpoints, grouped by module.")
     para(
         doc,
         "Lifecycle actions are modelled as sub-resource POSTs rather than status fields in a PUT — for "
@@ -1068,6 +1133,11 @@ def build():
                 "Purchasing",
                 "Supplier, PurchaseOrder + PurchaseOrderLine, GoodsReceipt, SupplierInvoice, SupplierPayment",
                 "GoodsReceipt posting creates the FIFO StockLayer at PO unit cost",
+            ),
+            (
+                "Accounting",
+                "Account (+ AccountType enum), JournalEntry + JournalLine, AccountingPeriod, BankStatementLine, Reconciliation",
+                "JournalEntry.Post() refuses to post unless debits equal credits; a void writes a reversing entry rather than editing the posted one",
             ),
             (
                 "Identity & auditing",
@@ -1134,12 +1204,13 @@ def build():
     )
     para(
         doc,
-        "Across the two projects there are 97 test methods (xUnit facts and theories; theories expand "
-        "to more cases at run time). Run them with `dotnet test` at the repository root.",
+        "Across the two projects there are 123 test methods (53 unit, 70 integration; xUnit facts and "
+        "theories, where theories expand to more cases at run time). Run them with `dotnet test` at the "
+        "repository root.",
     )
     para(
         doc,
-        "The browser client carries its own suite: Vitest with React Testing Library, 37 tests across "
+        "The browser client carries its own suite: Vitest with React Testing Library, 57 tests across "
         "money/date formatting, the API error-message unwrapping, and — the two places a silent "
         "regression would matter most — the full authentication state machine (silent re-auth on boot, "
         "the login/MFA-challenge/verify sequence against a mocked API, the forced-logout event) and the "
@@ -1232,8 +1303,7 @@ def build():
             "Move the refresh token out of localStorage and into an HttpOnly, Secure, SameSite cookie, and add a policy requiring multi-factor authentication for Administrator accounts rather than leaving it opt-in.",
             "Extend the attachments screen to the remaining record types (products, customers, suppliers) beyond the four document detail pages it already covers, and add email verification of accounts. Move Hangfire from in-memory storage to a durable store so queued work survives a restart.",
             "Target real-time notifications at the users who should receive them, rather than broadcasting every event to every signed-in staff member.",
-            "Decide the accounting boundary: either add a general ledger with double-entry posting from the operational documents, or define and build a clean export to the accounting package the business already uses.",
-            "Implement effective-dated exchange rates and, if the business needs them, bank reconciliation against Fiji bank statement formats and the RBF payment rails.",
+            "Replace the general ledger's hand-entered exchange rates with a live or effective-dated rate feed, and connect bank reconciliation to an actual Fiji bank statement import format and the RBF payment rails, rather than a manual match against typed-in lines.",
             "For an ephemeral or multi-instance deployment, substitute a cloud storage adapter for file attachments (local disk today) via the existing IFileStorage abstraction.",
             "Production operations: SQL Server or PostgreSQL with a tested backup and restore, secrets in a managed vault rather than environment variables, centralised log shipping alongside the optional Sentry error tracking, and a load test of the reporting queries against a realistic data volume.",
         ],
@@ -1247,7 +1317,7 @@ def build():
     doc.add_paragraph()
     para(
         doc,
-        "Document generated from source by docs/build_report.py on 11 July 2026.",
+        "Document generated from source by docs/build_report.py on 15 July 2026.",
         size=9,
         color=MUTED,
         italic=True,
